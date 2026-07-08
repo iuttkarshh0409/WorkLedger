@@ -15,6 +15,8 @@ import { clsx } from 'clsx';
 import type { Contributor } from '@domain';
 import { ContributorRole, ContributorStatus } from '@domain';
 import { ConfirmDialog } from '@shared/components/ConfirmDialog';
+import { Link } from 'react-router-dom';
+import { contributorProfilePath } from '@shared/constants/routes';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -87,9 +89,12 @@ export function ContributorCard({ contributor, onArchive }: ContributorCardProps
       <div className="flex-1 min-w-0">
         {/* Name + status badge */}
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm font-semibold text-text-primary truncate">
+          <Link
+            to={contributorProfilePath(contributor.id)}
+            className="text-sm font-semibold text-text-primary hover:text-accent hover:underline truncate"
+          >
             {contributor.name || '—'}
-          </span>
+          </Link>
           <span
             className={clsx(
               'inline-flex items-center rounded-md px-2 py-0.5',

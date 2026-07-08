@@ -38,10 +38,11 @@ import {
   validateCreateContributorInput,
   ContributorStatus,
   ActivityType,
+  Authorization,
 } from '@domain';
 import type { IActivityService } from '../activity/IActivityService';
 import { generateId } from '@lib';
-import { isDomainError, validationError, notFound, conflict } from '@lib/errors';
+import { isDomainError, validationError, notFound, conflict, permissionDenied } from '@lib/errors';
 
 export class ContributorService implements IContributorService {
   constructor(
@@ -55,6 +56,13 @@ export class ContributorService implements IContributorService {
     input: CreateContributorInput,
     performedBy: EntityId,
   ): Promise<Contributor | AnyDomainError> {
+    const actor = await this.contributors.findById(performedBy);
+    if (isDomainError(actor)) return actor;
+    if (actor === null) return notFound('Contributor', performedBy);
+    if (!Authorization.canArchiveContributor(actor.role)) {
+      return permissionDenied('ContributorService.addContributor', `Role "${actor.role}" is not authorized.`);
+    }
+
     const inputValidation = validateCreateContributorInput(input);
     if (!inputValidation.valid) {
       return validationError('ContributorService.addContributor', inputValidation.errors);
@@ -166,6 +174,13 @@ export class ContributorService implements IContributorService {
     id: EntityId,
     performedBy: EntityId,
   ): Promise<Contributor | AnyDomainError> {
+    const actor = await this.contributors.findById(performedBy);
+    if (isDomainError(actor)) return actor;
+    if (actor === null) return notFound('Contributor', performedBy);
+    if (!Authorization.canArchiveContributor(actor.role)) {
+      return permissionDenied('ContributorService.archiveContributor', `Role "${actor.role}" is not authorized.`);
+    }
+
     const existing = await this.contributors.findById(id);
     if (isDomainError(existing)) return existing;
     if (existing === null) return notFound('Contributor', id);

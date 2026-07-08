@@ -27,6 +27,7 @@
 import type { IMilestoneService } from './IMilestoneService';
 import type {
   IMilestoneRepository,
+  IContributorRepository,
   Milestone,
   CreateMilestoneInput,
   UpdateMilestoneInput,
@@ -39,18 +40,34 @@ import {
   validateCreateMilestoneInput,
   MilestoneStatus as Status,
   ActivityType,
+  Authorization,
 } from '@domain';
 import type { IActivityService } from '../activity/IActivityService';
 import { generateId } from '@lib';
-import { isDomainError, validationError, notFound, conflict } from '@lib/errors';
+import { isDomainError, validationError, notFound, conflict, permissionDenied } from '@lib/errors';
 
 export class MilestoneService implements IMilestoneService {
   constructor(
     private readonly milestones: IMilestoneRepository,
     private readonly activityService: IActivityService,
+    private readonly contributors?: IContributorRepository,
   ) {}
 
   // ─── Private helpers ────────────────────────────────────────────────────────
+
+  /**
+   * Asserts that the actor is an Owner.
+   */
+  private async checkOwner(performedBy: EntityId, action: string): Promise<AnyDomainError | null> {
+    if (!this.contributors) return null;
+    const actor = await this.contributors.findById(performedBy);
+    if (isDomainError(actor)) return actor;
+    if (actor === null) return notFound('Contributor', performedBy);
+    if (!Authorization.canManageMilestones(actor.role)) {
+      return permissionDenied(action, `Role "${actor.role}" is not authorized.`);
+    }
+    return null;
+  }
 
   private async fetch(id: EntityId): Promise<Milestone | AnyDomainError> {
     const result = await this.milestones.findById(id);
@@ -100,6 +117,9 @@ export class MilestoneService implements IMilestoneService {
     input: CreateMilestoneInput,
     performedBy: EntityId,
   ): Promise<Milestone | AnyDomainError> {
+    const authError = await this.checkOwner(performedBy, 'MilestoneService.createMilestone');
+    if (authError) return authError;
+
     const inputValidation = validateCreateMilestoneInput(input);
     if (!inputValidation.valid) {
       return validationError('MilestoneService.createMilestone', inputValidation.errors);
@@ -144,6 +164,9 @@ export class MilestoneService implements IMilestoneService {
     input: UpdateMilestoneInput,
     performedBy: EntityId,
   ): Promise<Milestone | AnyDomainError> {
+    const authError = await this.checkOwner(performedBy, 'MilestoneService.updateMilestone');
+    if (authError) return authError;
+
     const existing = await this.fetch(id);
     if (isDomainError(existing)) return existing;
 
@@ -183,7 +206,10 @@ export class MilestoneService implements IMilestoneService {
     id: EntityId,
     performedBy: EntityId,
   ): Promise<Milestone | AnyDomainError> {
-    // @permission Owner, Reviewer
+    // @permission Owner only
+    const authError = await this.checkOwner(performedBy, 'MilestoneService.completeMilestone');
+    if (authError) return authError;
+
     const existing = await this.fetch(id);
     if (isDomainError(existing)) return existing;
 
@@ -210,6 +236,9 @@ export class MilestoneService implements IMilestoneService {
     performedBy: EntityId,
   ): Promise<Milestone | AnyDomainError> {
     // @permission Owner only
+    const authError = await this.checkOwner(performedBy, 'MilestoneService.archiveMilestone');
+    if (authError) return authError;
+
     const existing = await this.fetch(id);
     if (isDomainError(existing)) return existing;
 

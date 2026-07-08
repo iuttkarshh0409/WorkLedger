@@ -17,8 +17,9 @@
 import { useState } from 'react';
 import { clsx } from 'clsx';
 import type { Assignment, Contributor } from '@domain';
-import { AssignmentStatus, AssignmentPriority } from '@domain';
+import { AssignmentStatus, AssignmentPriority, Authorization } from '@domain';
 import { ConfirmDialog } from '@shared/components/ConfirmDialog';
+import { useSession } from '@app/SessionContext';
 
 // ─── Badge config helpers ─────────────────────────────────────────────────────
 
@@ -97,6 +98,7 @@ export function AssignmentCard({
   onArchive,
   onSubmit,
 }: AssignmentCardProps) {
+  const { session } = useSession();
   const status   = statusConfig(assignment.status);
   const priority = priorityConfig(assignment.priority);
   const overdue  = isOverdue(assignment.deadline, assignment.status);
@@ -191,10 +193,10 @@ export function AssignmentCard({
 
       {/* Actions row */}
       <div className="flex items-center justify-end gap-2 pt-1 border-t border-border">
-        {assignment.status === AssignmentStatus.InProgress && (
+        {assignment.status === AssignmentStatus.InProgress && session && Authorization.canSubmitWork(session.role, session.contributorId, assignment) && (
           <button
             type="button"
-            onClick={() => onSubmit(assignment.id)}
+            onClick={(e) => { e.stopPropagation(); onSubmit(assignment.id); }}
             className={clsx(
               'text-xs font-medium px-3 py-1.5 rounded-md',
               'text-text-inverse bg-accent hover:bg-accent-hover',
@@ -206,10 +208,10 @@ export function AssignmentCard({
           </button>
         )}
 
-        {assignment.status === AssignmentStatus.RevisionRequested && (
+        {assignment.status === AssignmentStatus.RevisionRequested && session && Authorization.canSubmitWork(session.role, session.contributorId, assignment) && (
           <button
             type="button"
-            onClick={() => onSubmit(assignment.id)}
+            onClick={(e) => { e.stopPropagation(); onSubmit(assignment.id); }}
             className={clsx(
               'text-xs font-medium px-3 py-1.5 rounded-md',
               'text-accent border border-accent',
@@ -221,10 +223,10 @@ export function AssignmentCard({
           </button>
         )}
 
-        {assignment.status === AssignmentStatus.Assigned && (
+        {assignment.status === AssignmentStatus.Assigned && session && Authorization.canSubmitWork(session.role, session.contributorId, assignment) && (
           <button
             type="button"
-            onClick={() => onAccept(assignment.id)}
+            onClick={(e) => { e.stopPropagation(); onAccept(assignment.id); }}
             className={clsx(
               'text-xs font-medium px-3 py-1.5 rounded-md',
               'text-accent border border-accent',
@@ -236,10 +238,10 @@ export function AssignmentCard({
           </button>
         )}
 
-        {assignment.status === AssignmentStatus.Accepted && (
+        {assignment.status === AssignmentStatus.Accepted && session && Authorization.canSubmitWork(session.role, session.contributorId, assignment) && (
           <button
             type="button"
-            onClick={() => onStart(assignment.id)}
+            onClick={(e) => { e.stopPropagation(); onStart(assignment.id); }}
             className={clsx(
               'text-xs font-medium px-3 py-1.5 rounded-md',
               'text-accent border border-accent',
@@ -251,10 +253,10 @@ export function AssignmentCard({
           </button>
         )}
 
-        {assignment.status === AssignmentStatus.Completed && (
+        {assignment.status === AssignmentStatus.Completed && session && Authorization.canArchiveAssignment(session.role) && (
           <button
             type="button"
-            onClick={() => setConfirmOpen(true)}
+            onClick={(e) => { e.stopPropagation(); setConfirmOpen(true); }}
             className={clsx(
               'text-xs text-text-muted hover:text-danger',
               'transition-colors duration-150',

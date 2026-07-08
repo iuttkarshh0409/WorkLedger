@@ -30,6 +30,7 @@ import type {
   AnyDomainError,
   EntityId,
 } from '@domain';
+import { Authorization } from '@domain';
 import type { IAssignmentService } from '@services/assignment/IAssignmentService';
 import type { IContributorService } from '@services/contributor/IContributorService';
 import type { IWorkspaceService }   from '@services/workspace/IWorkspaceService';
@@ -148,10 +149,15 @@ export function useAssignments(
   });
 
   // Derived — no extra state
-  const filteredAssignments = useMemo(
-    () => applyFilters(state.assignments, state.filters),
-    [state.assignments, state.filters],
-  );
+  const filteredAssignments = useMemo(() => {
+    let assignments = state.assignments;
+    if (session) {
+      assignments = assignments.filter((a) =>
+        Authorization.canViewAssignment(session.role, session.contributorId, a)
+      );
+    }
+    return applyFilters(assignments, state.filters);
+  }, [state.assignments, state.filters, session]);
 
   // ── Load ─────────────────────────────────────────────────────────────────
 

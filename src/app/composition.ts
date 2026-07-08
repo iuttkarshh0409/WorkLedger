@@ -175,10 +175,10 @@ export function createApplicationComposition(): ApplicationComposition {
   const activityService    = new ActivityService(activities);
   const workspaceService   = new WorkspaceService(workspaces, activityService);
   const contributorService = new ContributorService(contributors, activityService);
-  const milestoneService   = new MilestoneService(milestones, activityService);
-  const assignmentService  = new AssignmentService(assignments, activityService);
-  const submissionService  = new SubmissionService(submissions, assignments, activityService);
-  const reviewService      = new ReviewService(reviews, assignments, activityService);
+  const milestoneService   = new MilestoneService(milestones, activityService, contributors);
+  const assignmentService  = new AssignmentService(assignments, activityService, contributors);
+  const submissionService  = new SubmissionService(submissions, assignments, activityService, contributors);
+  const reviewService      = new ReviewService(reviews, assignments, activityService, contributors);
 
   const services: ApplicationServices = Object.freeze({
     activity:    activityService,

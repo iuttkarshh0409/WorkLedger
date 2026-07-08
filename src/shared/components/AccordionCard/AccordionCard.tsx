@@ -57,13 +57,20 @@ export function AccordionCard({
       )}
     >
       {/* Toggle header */}
-      <button
-        type="button"
+      <div
+        role="button"
+        tabIndex={0}
         aria-expanded={open}
         aria-controls={panelId}
         onClick={onToggle}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onToggle();
+          }
+        }}
         className={clsx(
-          'w-full text-left p-4 rounded-lg',
+          'w-full text-left p-4 rounded-lg cursor-pointer select-none',
           open && 'rounded-b-none',
           'focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent',
           'transition-colors duration-150',
@@ -71,7 +78,7 @@ export function AccordionCard({
         )}
       >
         {header}
-      </button>
+      </div>
 
       {/* Expandable body */}
       {open && (

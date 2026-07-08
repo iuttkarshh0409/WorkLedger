@@ -19,7 +19,12 @@ export const ROUTES = {
   ACTIVITY: '/activity',
   ANALYTICS: '/analytics',
   SETTINGS: '/settings',
+  CONTRIBUTOR_PROFILE: '/contributors/:contributorId',
 } as const;
+
+export function contributorProfilePath(id: string): string {
+  return `/contributors/${encodeURIComponent(id)}`;
+}
 
 export type AppRoute = (typeof ROUTES)[keyof typeof ROUTES];
 

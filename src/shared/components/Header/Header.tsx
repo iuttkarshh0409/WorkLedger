@@ -14,11 +14,12 @@
  * - Add user profile menu with workspace switcher.
  */
 
-import { useLocation } from 'react-router-dom';
+import { useLocation, Link } from 'react-router-dom';
 import { clsx } from 'clsx';
 import { Icon } from '@shared/components/Icon';
 import { PRIMARY_NAV_ITEMS } from '@shared/constants/navigation';
 import { useSession } from '@app/SessionContext';
+import { contributorProfilePath } from '@shared/constants/routes';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -118,24 +119,30 @@ export function Header({ className }: HeaderProps) {
       {/* User profile and details */}
       {session && (
         <div className="flex items-center gap-2 border-l border-border pl-4">
-          <div
-            aria-label={`Logged in as ${session.name}`}
-            className={clsx(
-              'flex items-center justify-center w-8 h-8 rounded-full',
-              'bg-accent-subtle text-accent text-xs font-semibold',
-              'border border-border select-none shrink-0',
-            )}
+          <Link
+            to={contributorProfilePath(session.contributorId)}
+            title="View Profile"
+            className="flex items-center gap-2 hover:opacity-85 transition-opacity"
           >
-            {initials}
-          </div>
-          <div className="hidden md:flex flex-col text-left mr-2">
-            <span className="text-xs font-semibold text-text-primary leading-tight max-w-[120px] truncate">
-              {session.name}
-            </span>
-            <span className="text-[10px] text-text-secondary font-medium leading-none">
-              {session.role}
-            </span>
-          </div>
+            <div
+              aria-label={`Logged in as ${session.name}`}
+              className={clsx(
+                'flex items-center justify-center w-8 h-8 rounded-full',
+                'bg-accent-subtle text-accent text-xs font-semibold',
+                'border border-border select-none shrink-0',
+              )}
+            >
+              {initials}
+            </div>
+            <div className="hidden md:flex flex-col text-left mr-2">
+              <span className="text-xs font-semibold text-text-primary leading-tight max-w-[120px] truncate hover:text-accent">
+                {session.name}
+              </span>
+              <span className="text-[10px] text-text-secondary font-medium leading-none">
+                {session.role}
+              </span>
+            </div>
+          </Link>
 
           <button
             type="button"

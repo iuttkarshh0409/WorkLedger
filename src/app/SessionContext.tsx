@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { ContributorRole } from '@domain';
+import { generateId } from '@lib';
 
 export const SESSION_STORAGE_KEY = 'wl:session';
 
@@ -9,12 +10,13 @@ export interface Session {
   role: ContributorRole;
   name: string;
   email: string;
+  sessionId: string;
 }
 
 interface SessionContextType {
   session: Session | null;
   loading: boolean;
-  login: (session: Session) => void;
+  login: (session: Omit<Session, 'sessionId'>) => void;
   logout: () => void;
 }
 
@@ -37,7 +39,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           parsed.name &&
           parsed.email
         ) {
-          setSession(parsed);
+          let sessId = sessionStorage.getItem('wl:session_id') || '';
+          if (!sessId) {
+            sessId = parsed.sessionId || generateId();
+            sessionStorage.setItem('wl:session_id', sessId);
+          }
+          setSession({
+            ...parsed,
+            sessionId: sessId,
+          });
         } else {
           localStorage.removeItem(SESSION_STORAGE_KEY);
         }
@@ -49,13 +59,23 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setLoading(false);
   }, []);
 
-  const login = (newSession: Session) => {
-    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(newSession));
-    setSession(newSession);
+  const login = (newSession: Omit<Session, 'sessionId'>) => {
+    let sessId = sessionStorage.getItem('wl:session_id');
+    if (!sessId) {
+      sessId = generateId();
+      sessionStorage.setItem('wl:session_id', sessId);
+    }
+    const sessionObj: Session = {
+      ...newSession,
+      sessionId: sessId,
+    };
+    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionObj));
+    setSession(sessionObj);
   };
 
   const logout = () => {
     localStorage.removeItem(SESSION_STORAGE_KEY);
+    sessionStorage.removeItem('wl:session_id');
     setSession(null);
   };
 

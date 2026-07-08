@@ -33,6 +33,7 @@ import type { IReviewService } from './IReviewService';
 import type {
   IReviewRepository,
   IAssignmentRepository,
+  IContributorRepository,
   Review,
   CreateReviewInput,
   UpdateReviewInput,
@@ -45,17 +46,19 @@ import {
   validateReviewScores,
   AssignmentStatus,
   ActivityType,
+  Authorization,
 } from '@domain';
 import type { IActivityService } from '../activity/IActivityService';
 import { generateId } from '@lib';
 import { calculateOverallScore } from '@lib/scoring';
-import { isDomainError, validationError, notFound, conflict } from '@lib/errors';
+import { isDomainError, validationError, notFound, conflict, permissionDenied } from '@lib/errors';
 
 export class ReviewService implements IReviewService {
   constructor(
     private readonly reviews: IReviewRepository,
     private readonly assignments: IAssignmentRepository,
     private readonly activityService: IActivityService,
+    private readonly contributors?: IContributorRepository,
   ) {}
 
   // ─── Private helpers ────────────────────────────────────────────────────────
@@ -112,6 +115,15 @@ export class ReviewService implements IReviewService {
     // Assignment must be Under Review or Submitted to accept a review
     const assignment = await this.fetchAssignment(input.assignmentId);
     if (isDomainError(assignment)) return assignment;
+
+    if (this.contributors) {
+      const actor = await this.contributors.findById(performedBy);
+      if (isDomainError(actor)) return actor;
+      if (actor === null) return notFound('Contributor', performedBy);
+      if (!Authorization.canPublishReview(actor.role, performedBy, assignment)) {
+        return permissionDenied('ReviewService.publishReview', `User ${performedBy} is not authorized to review this assignment.`);
+      }
+    }
 
     if (
       assignment.status !== AssignmentStatus.UnderReview &&
@@ -203,6 +215,15 @@ export class ReviewService implements IReviewService {
     // @permission Owner, Reviewer (assigned Reviewer only)
     const assignment = await this.fetchAssignment(assignmentId);
     if (isDomainError(assignment)) return assignment;
+
+    if (this.contributors) {
+      const actor = await this.contributors.findById(performedBy);
+      if (isDomainError(actor)) return actor;
+      if (actor === null) return notFound('Contributor', performedBy);
+      if (!Authorization.canRequestRevision(actor.role, performedBy, assignment)) {
+        return permissionDenied('ReviewService.requestRevision', `User ${performedBy} is not authorized to request revisions for this assignment.`);
+      }
+    }
 
     if (
       assignment.status !== AssignmentStatus.UnderReview &&
@@ -307,6 +328,15 @@ export class ReviewService implements IReviewService {
     performedBy: EntityId,
   ): Promise<Review | AnyDomainError> {
     // @permission Owner only
+    if (this.contributors) {
+      const actor = await this.contributors.findById(performedBy);
+      if (isDomainError(actor)) return actor;
+      if (actor === null) return notFound('Contributor', performedBy);
+      if (!Authorization.canArchiveContributor(actor.role)) {
+        return permissionDenied('ReviewService.correctReview', `Role "${actor.role}" is not authorized.`);
+      }
+    }
+
     const existing = await this.fetchReview(id);
     if (isDomainError(existing)) return existing;
 

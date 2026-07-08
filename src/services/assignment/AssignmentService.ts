@@ -37,6 +37,7 @@
 import type { IAssignmentService } from './IAssignmentService';
 import type {
   IAssignmentRepository,
+  IContributorRepository,
   Assignment,
   CreateAssignmentInput,
   UpdateAssignmentInput,
@@ -50,6 +51,7 @@ import {
   AssignmentStatus as Status,
   AssignmentPriority,
   ActivityType,
+  Authorization,
 } from '@domain';
 import type { IActivityService } from '../activity/IActivityService';
 import { generateId } from '@lib';
@@ -58,15 +60,31 @@ import {
   validationError,
   notFound,
   conflict,
+  permissionDenied,
 } from '@lib/errors';
 
 export class AssignmentService implements IAssignmentService {
   constructor(
     private readonly assignments: IAssignmentRepository,
     private readonly activityService: IActivityService,
+    private readonly contributors?: IContributorRepository,
   ) {}
 
   // ─── Private helpers ────────────────────────────────────────────────────────
+
+  /**
+   * Asserts that the actor is an Owner.
+   */
+  private async checkOwner(performedBy: EntityId, action: string): Promise<AnyDomainError | null> {
+    if (!this.contributors) return null;
+    const actor = await this.contributors.findById(performedBy);
+    if (isDomainError(actor)) return actor;
+    if (actor === null) return notFound('Contributor', performedBy);
+    if (!Authorization.canCreateAssignment(actor.role)) {
+      return permissionDenied(action, `Role "${actor.role}" is not authorized.`);
+    }
+    return null;
+  }
 
   /**
    * Fetches an Assignment by id and returns a NotFoundError if missing.
@@ -127,6 +145,9 @@ export class AssignmentService implements IAssignmentService {
     input: CreateAssignmentInput,
     performedBy: EntityId,
   ): Promise<Assignment | AnyDomainError> {
+    const authError = await this.checkOwner(performedBy, 'AssignmentService.createAssignment');
+    if (authError) return authError;
+
     const inputValidation = validateCreateAssignmentInput(input);
     if (!inputValidation.valid) {
       return validationError('AssignmentService.createAssignment', inputValidation.errors);
@@ -177,6 +198,9 @@ export class AssignmentService implements IAssignmentService {
     input: UpdateAssignmentInput,
     performedBy: EntityId,
   ): Promise<Assignment | AnyDomainError> {
+    const authError = await this.checkOwner(performedBy, 'AssignmentService.updateAssignment');
+    if (authError) return authError;
+
     const existing = await this.fetch(id);
     if (isDomainError(existing)) return existing;
 
@@ -300,6 +324,9 @@ export class AssignmentService implements IAssignmentService {
     performedBy: EntityId,
   ): Promise<Assignment | AnyDomainError> {
     // @permission Owner only
+    const authError = await this.checkOwner(performedBy, 'AssignmentService.archiveAssignment');
+    if (authError) return authError;
+
     const existing = await this.fetch(id);
     if (isDomainError(existing)) return existing;
 

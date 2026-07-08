@@ -85,10 +85,12 @@ export function SubmitWorkDialog({
   const dialogRef     = useRef<HTMLDialogElement>(null);
   const firstInputRef = useRef<HTMLTextAreaElement>(null);
   const [values, setValues] = useState<SubmitWorkFormValues>(DEFAULT_VALUES);
+  const [localError, setLocalError] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
       setValues(DEFAULT_VALUES);
+      setLocalError(null);
       dialogRef.current?.showModal();
       setTimeout(() => firstInputRef.current?.focus(), 50);
     } else {
@@ -111,6 +113,15 @@ export function SubmitWorkDialog({
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (submitting) return;
+    if (!values.description.trim()) {
+      setLocalError('Submission Title / Description is required.');
+      return;
+    }
+    if (!values.githubRepository.trim()) {
+      setLocalError('Submission URL / Repository Link is required.');
+      return;
+    }
+    setLocalError(null);
     onSubmit(values);
   };
 
@@ -174,7 +185,7 @@ export function SubmitWorkDialog({
           {/* Description */}
           <div>
             <label htmlFor="s-description" className={labelClass}>
-              What did you build?
+              Submission Title / Description (required)
             </label>
             <textarea
               ref={firstInputRef}
@@ -196,12 +207,12 @@ export function SubmitWorkDialog({
           {/* Links section */}
           <fieldset className="flex flex-col gap-3 border-0 p-0 m-0">
             <legend className="text-xs font-medium text-text-secondary mb-1">
-              Links <span className="text-text-muted font-normal">(optional)</span>
+              Links
             </legend>
 
             <div>
               <label htmlFor="s-repo" className={labelClass}>
-                Repository URL
+                Submission URL / Repository Link (required)
               </label>
               <input
                 id="s-repo"
@@ -217,7 +228,7 @@ export function SubmitWorkDialog({
 
             <div>
               <label htmlFor="s-pr" className={labelClass}>
-                Pull request URL
+                Pull request URL <span className="text-text-muted font-normal">(optional)</span>
               </label>
               <input
                 id="s-pr"
@@ -233,7 +244,7 @@ export function SubmitWorkDialog({
 
             <div>
               <label htmlFor="s-demo" className={labelClass}>
-                Live demo URL
+                Live demo URL <span className="text-text-muted font-normal">(optional)</span>
               </label>
               <input
                 id="s-demo"
@@ -266,12 +277,12 @@ export function SubmitWorkDialog({
           </div>
 
           {/* Service error */}
-          {error && (
+          {(localError || error) && (
             <div
               role="alert"
               className="rounded-md bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700"
             >
-              {error}
+              {localError || error}
             </div>
           )}
         </div>

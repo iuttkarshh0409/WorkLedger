@@ -17,8 +17,9 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 
 import { WorkspaceLayout } from '@shared/components/WorkspaceLayout';
-import { ProtectedRoute } from '@shared/components/ProtectedRoute';
+import { ProtectedRoute, RoleProtectedRoute } from '@shared/components/ProtectedRoute';
 import { ROUTES } from '@shared/constants/routes';
+import { ContributorRole } from '@domain';
 
 import { DashboardPage } from '@pages/DashboardPage';
 import { ContributorsPage } from '@pages/ContributorsPage';
@@ -29,6 +30,7 @@ import { ActivityPage } from '@pages/ActivityPage';
 import { AnalyticsPage } from '@pages/AnalyticsPage';
 import { SettingsPage } from '@pages/SettingsPage';
 import { DemoEntryPage } from '@pages/DemoEntryPage';
+import { ContributorProfilePage } from '@pages/ContributorProfilePage';
 
 export const router = createBrowserRouter([
   {
@@ -52,10 +54,25 @@ export const router = createBrowserRouter([
       { path: ROUTES.CONTRIBUTORS, element: <ContributorsPage /> },
       { path: ROUTES.MILESTONES, element: <MilestonesPage /> },
       { path: ROUTES.ASSIGNMENTS, element: <AssignmentsPage /> },
-      { path: ROUTES.REVIEWS, element: <ReviewsPage /> },
+      {
+        path: ROUTES.REVIEWS,
+        element: (
+          <RoleProtectedRoute allowedRoles={[ContributorRole.Owner, ContributorRole.Reviewer]}>
+            <ReviewsPage />
+          </RoleProtectedRoute>
+        ),
+      },
       { path: ROUTES.ACTIVITY, element: <ActivityPage /> },
       { path: ROUTES.ANALYTICS, element: <AnalyticsPage /> },
-      { path: ROUTES.SETTINGS, element: <SettingsPage /> },
+      {
+        path: ROUTES.SETTINGS,
+        element: (
+          <RoleProtectedRoute allowedRoles={[ContributorRole.Owner]}>
+            <SettingsPage />
+          </RoleProtectedRoute>
+        ),
+      },
+      { path: ROUTES.CONTRIBUTOR_PROFILE, element: <ContributorProfilePage /> },
     ],
   },
 ]);

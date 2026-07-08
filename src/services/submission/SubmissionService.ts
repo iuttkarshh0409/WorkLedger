@@ -31,6 +31,7 @@ import type { ISubmissionService } from './ISubmissionService';
 import type {
   ISubmissionRepository,
   IAssignmentRepository,
+  IContributorRepository,
   Submission,
   CreateSubmissionInput,
   AnyDomainError,
@@ -41,16 +42,18 @@ import {
   validateCreateSubmissionInput,
   AssignmentStatus,
   ActivityType,
+  Authorization,
 } from '@domain';
 import type { IActivityService } from '../activity/IActivityService';
 import { generateId } from '@lib';
-import { isDomainError, validationError, notFound, conflict } from '@lib/errors';
+import { isDomainError, validationError, notFound, conflict, permissionDenied } from '@lib/errors';
 
 export class SubmissionService implements ISubmissionService {
   constructor(
     private readonly submissions: ISubmissionRepository,
     private readonly assignments: IAssignmentRepository,
     private readonly activityService: IActivityService,
+    private readonly contributors?: IContributorRepository,
   ) {}
 
   // ─── Private helpers ────────────────────────────────────────────────────────
@@ -126,6 +129,15 @@ export class SubmissionService implements ISubmissionService {
     if (isDomainError(assignment)) return assignment;
     if (assignment === null) return notFound('Assignment', input.assignmentId);
 
+    if (this.contributors) {
+      const actor = await this.contributors.findById(performedBy);
+      if (isDomainError(actor)) return actor;
+      if (actor === null) return notFound('Contributor', performedBy);
+      if (!Authorization.canSubmitWork(actor.role, performedBy, assignment)) {
+        return permissionDenied('SubmissionService.submitWork', `User ${performedBy} is not authorized to submit this assignment.`);
+      }
+    }
+
     if (assignment.status !== AssignmentStatus.InProgress) {
       return conflict(
         `Assignment "${assignment.id}" must be In Progress to accept a submission. ` +
@@ -159,6 +171,15 @@ export class SubmissionService implements ISubmissionService {
     const assignment = await this.assignments.findById(input.assignmentId);
     if (isDomainError(assignment)) return assignment;
     if (assignment === null) return notFound('Assignment', input.assignmentId);
+
+    if (this.contributors) {
+      const actor = await this.contributors.findById(performedBy);
+      if (isDomainError(actor)) return actor;
+      if (actor === null) return notFound('Contributor', performedBy);
+      if (!Authorization.canSubmitWork(actor.role, performedBy, assignment)) {
+        return permissionDenied('SubmissionService.resubmitWork', `User ${performedBy} is not authorized to resubmit this assignment.`);
+      }
+    }
 
     if (assignment.status !== AssignmentStatus.RevisionRequested) {
       return conflict(
