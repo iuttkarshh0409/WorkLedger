@@ -1,0 +1,148 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply bg-surface-secondary text-text-primary font-sans;
+    margin: 0;
+    padding: 0;
+    line-height: 1.5;
+  }
+
+  /* Focus ring — visible for keyboard navigation, suppressed on mouse click */
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-accent;
+  }
+
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  /* Scrollbar — subtle, non-intrusive */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-surface-muted;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-border-strong rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-text-muted;
+  }
+
+  /* Typography baseline */
+  h1, h2, h3, h4, h5, h6 {
+    @apply text-text-primary font-semibold leading-tight;
+    margin: 0;
+  }
+
+  p {
+    margin: 0;
+  }
+
+  a {
+    @apply text-accent hover:text-accent;
+    text-decoration: none;
+  }
+}
+
+@layer components {
+  /* Shared layout utility classes */
+  .page-container {
+    @apply flex flex-col gap-6 p-6;
+    animation: fadeUp 200ms ease-out both;
+  }
+
+  .page-header {
+    @apply flex flex-col gap-1;
+  }
+
+  .page-title {
+    @apply text-2xl font-semibold text-text-primary;
+  }
+
+  .page-description {
+    @apply text-sm text-text-secondary;
+  }
+
+  /* Card foundation */
+  .card {
+    @apply bg-surface rounded-lg border border-border p-4;
+  }
+
+  /* Divider */
+  .divider {
+    @apply border-t border-border;
+  }
+
+  /* Skeleton shimmer — replaces plain animate-pulse for loading states */
+  .skeleton {
+    @apply rounded;
+    background: linear-gradient(
+      90deg,
+      theme('colors.surface.muted') 25%,
+      theme('colors.border.DEFAULT') 50%,
+      theme('colors.surface.muted') 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.8s ease-in-out infinite;
+  }
+
+  /* Dialog animation — applied inside <dialog> on open */
+  dialog[open] > * {
+    animation: dialogIn 180ms ease-out both;
+  }
+
+  /* Native <dialog> — proper centering and backdrop */
+  dialog {
+    position: fixed;
+    inset: 0;
+    margin: auto;
+    max-height: 90dvh;
+    max-width: calc(100vw - 2rem);
+    display: flex;
+    flex-direction: column;
+    border: none;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  dialog:not([open]) {
+    display: none;
+  }
+
+  dialog::backdrop {
+    background-color: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(1px);
+  }
+
+  /* Keyboard shortcut hint badge */
+  .kbd {
+    @apply inline-flex items-center justify-center
+           h-5 min-w-[1.25rem] px-1
+           rounded border border-border
+           text-[10px] font-medium text-text-muted
+           bg-surface-muted
+           leading-none;
+  }
+}

@@ -299,3 +299,5 @@ A feature is complete only when:
 > **Understand first. Architect second. Implement third. Optimize last.**
 
 Every session should leave the project in a better state than it was found.
+
+
