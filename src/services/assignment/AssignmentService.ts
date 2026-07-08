@@ -154,10 +154,13 @@ export class AssignmentService implements IAssignmentService {
     }
 
     const now = new Date().toISOString();
+    const isHist = !!input.isHistorical;
+    const histCreated = input.createdAt || input.assignedOn;
+    
     const assignment: Assignment = {
       id:            generateId(),
-      createdAt:     now,
-      updatedAt:     now,
+      createdAt:     isHist ? histCreated : now,
+      updatedAt:     isHist ? histCreated : now,
       workspaceId:   input.workspaceId,
       milestoneId:   input.milestoneId  ?? null,
       contributorId: input.contributorId,
@@ -168,7 +171,7 @@ export class AssignmentService implements IAssignmentService {
       tags:          input.tags         ?? [],
       assignedOn:    input.assignedOn,
       deadline:      input.deadline,
-      status:        Status.Draft,
+      status:        isHist && input.status ? input.status : Status.Draft,
       revisionCount: 0,
     };
 
@@ -184,10 +187,14 @@ export class AssignmentService implements IAssignmentService {
       workspaceId:   saved.workspaceId,
       performedBy,
       type:          ActivityType.AssignmentCreated,
-      timestamp:     now,
+      timestamp:     isHist ? histCreated : now,
       assignmentId:  saved.id,
       contributorId: saved.contributorId,
-      metadata:      { title: saved.title, priority: saved.priority },
+      metadata:      {
+        title: saved.title,
+        priority: saved.priority,
+        ...(isHist ? { isHistorical: true, enteredOn: input.enteredOn || now.split('T')[0] } : {})
+      },
     });
 
     return saved;

@@ -225,11 +225,21 @@ export function useAssignments(
       if (!state.workspaceId) return false;
       setState((s) => ({ ...s, submitting: true, submitError: null }));
 
+      const isHist = !!(input as any).isHistorical;
+      const receivedDate = (input as any).receivedOn ? new Date((input as any).receivedOn).toISOString() : new Date().toISOString();
+      const statusValue = (input as any).initialStatus;
+
       const createResult = await assignmentService.createAssignment(
         {
           ...input,
           workspaceId: state.workspaceId,
-          assignedOn:  new Date().toISOString(),
+          assignedOn:  receivedDate,
+          ...(isHist ? {
+            isHistorical: true,
+            enteredOn: new Date().toISOString().split('T')[0],
+            createdAt: receivedDate,
+            status: statusValue,
+          } : {})
         },
         DEMO_OWNER_ID,
       );

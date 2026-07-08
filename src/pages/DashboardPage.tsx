@@ -20,7 +20,9 @@
 import { useCallback, useState } from 'react';
 import { useServices }         from '@hooks/useServices';
 import { useDashboard }        from '@features/dashboard/useDashboard';
+import { useSession }          from '@app/SessionContext';
 import { SummaryCards }        from '@features/dashboard/SummaryCards';
+import { HistoricalImportCard } from '@features/dashboard/HistoricalImportCard';
 import { PendingAssignments }  from '@features/dashboard/PendingAssignments';
 import { RecentActivity }      from '@features/dashboard/RecentActivity';
 import { RecentReviews }       from '@features/dashboard/RecentReviews';
@@ -70,6 +72,9 @@ export function DashboardPage() {
     milestone:   milestoneService,
   } = useServices();
 
+  const { session } = useSession();
+  const actorId = session ? session.contributorId : DEMO_OWNER_ID;
+
   // ── Dashboard data ──────────────────────────────────────────────────────────
   // Remounting the hook by changing a key causes a fresh load after mutations.
   const [refreshKey, setRefreshKey] = useState(0);
@@ -114,7 +119,7 @@ export function DashboardPage() {
             email:       values.email.trim(),
             role:        values.role,
           },
-          DEMO_OWNER_ID,
+          actorId,
         );
 
         if (isDomainError(result)) {
@@ -132,7 +137,7 @@ export function DashboardPage() {
         setSubmittingContrib(false);
       }
     },
-    [contributorService, workspaceService, refresh],
+    [contributorService, workspaceService, refresh, actorId],
   );
 
   const handleCreateAssignment = useCallback(
@@ -142,6 +147,10 @@ export function DashboardPage() {
 
       try {
         const wsId = await getOrCreateDemoWorkspace(workspaceService);
+        const isHist = !!(values as any).isHistorical;
+        const receivedDate = (values as any).receivedOn ? new Date((values as any).receivedOn).toISOString() : new Date().toISOString();
+        const statusValue = (values as any).initialStatus;
+
         const result = await assignmentService.createAssignment(
           {
             workspaceId:   wsId,
@@ -150,10 +159,16 @@ export function DashboardPage() {
             title:         values.title.trim(),
             description:   values.description.trim(),
             priority:      values.priority,
-            assignedOn:    new Date().toISOString(),
+            assignedOn:    receivedDate,
             deadline:      new Date(values.deadline).toISOString(),
+            ...(isHist ? {
+              isHistorical: true,
+              enteredOn: new Date().toISOString().split('T')[0],
+              createdAt: receivedDate,
+              status: statusValue as any,
+            } : {})
           },
-          DEMO_OWNER_ID,
+          actorId,
         );
 
         if (isDomainError(result)) {
@@ -165,11 +180,11 @@ export function DashboardPage() {
         }
 
         // Automatically transition from Draft to Assigned
-        if (result.status === 'Draft' && result.contributorId) {
+        if (!isHist && result.status === 'Draft' && result.contributorId) {
           await assignmentService.assignContributor(
             result.id,
             result.contributorId,
-            DEMO_OWNER_ID,
+            actorId,
           );
         }
 
@@ -179,7 +194,7 @@ export function DashboardPage() {
         setSubmittingAssign(false);
       }
     },
-    [assignmentService, workspaceService, refresh],
+    [assignmentService, workspaceService, refresh, actorId],
   );
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -204,6 +219,11 @@ export function DashboardPage() {
       <div className="page-header">
         <h2 className="page-title">Dashboard</h2>
         <p className="page-description">Workspace overview</p>
+      </div>
+
+      {/* Historical Data Entry Mode Summary */}
+      <div className="mb-4">
+        <HistoricalImportCard />
       </div>
 
       {/* Row 1 — Summary metrics */}

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useServices } from '@hooks/useServices';
 import { isDomainError } from '@lib/errors';
-import { calculateOverallScore } from '@lib/scoring';
+import { calculateOverallScore, getPerformanceRating } from '@lib/scoring';
 import {
   AssignmentStatus,
   AssignmentPriority,
@@ -465,11 +465,19 @@ export function ContributorProfilePage() {
           </div>
           <div className="bg-surface rounded-lg p-4 border border-border flex flex-col justify-between">
             <span className="text-[10px] text-text-muted uppercase tracking-wider font-semibold">
-              Avg Score
+              Performance Score
             </span>
-            <span className="text-xl font-bold text-text-primary mt-2">
-              {avgReviewScore > 0 ? `${avgReviewScore} / 5` : '—'}
-            </span>
+            <div className="flex flex-col items-start gap-1 mt-2">
+              <span className="text-xl font-bold text-text-primary">
+                {avgReviewScore > 0 ? `${avgReviewScore} / 10` : '—'}
+              </span>
+              {avgReviewScore > 0 && (
+                <span className={clsx("inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-semibold ring-1 ring-inset", getPerformanceRating(avgReviewScore).colorClass)}>
+                  <span className={clsx("h-1 w-1 rounded-full", getPerformanceRating(avgReviewScore).dotColorClass)} />
+                  <span>{getPerformanceRating(avgReviewScore).label}</span>
+                </span>
+              )}
+            </div>
           </div>
           <div className="bg-surface rounded-lg p-4 border border-border flex flex-col justify-between">
             <span className="text-[10px] text-text-muted uppercase tracking-wider font-semibold">

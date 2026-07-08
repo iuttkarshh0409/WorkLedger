@@ -63,10 +63,11 @@ export class SubmissionService implements ISubmissionService {
    */
   private buildSubmission(input: CreateSubmissionInput): Submission {
     const now = new Date().toISOString();
+    const isHist = !!input.isHistorical;
     return {
       id:               generateId(),
-      createdAt:        now,
-      updatedAt:        now,
+      createdAt:        isHist ? input.submittedOn : now,
+      updatedAt:        isHist ? input.submittedOn : now,
       assignmentId:     input.assignmentId,
       submittedOn:      input.submittedOn,
       description:      input.description      ?? '',
@@ -86,6 +87,8 @@ export class SubmissionService implements ISubmissionService {
     submission: Submission,
     targetStatus: AssignmentStatus,
     performedBy: EntityId,
+    isHistorical?: boolean,
+    enteredOn?: string,
   ): Promise<Submission | AnyDomainError> {
     const saved = await this.submissions.create(submission);
     if (isDomainError(saved)) return saved;
@@ -96,7 +99,7 @@ export class SubmissionService implements ISubmissionService {
     if (assignment === null) return notFound('Assignment', saved.assignmentId);
 
     const now = new Date().toISOString();
-    const transitioned = { ...assignment, status: targetStatus, updatedAt: now };
+    const transitioned = { ...assignment, status: targetStatus, updatedAt: isHistorical ? submission.submittedOn : now };
     const assignmentSaved = await this.assignments.update(transitioned);
     if (isDomainError(assignmentSaved)) return assignmentSaved;
 
@@ -104,10 +107,14 @@ export class SubmissionService implements ISubmissionService {
       workspaceId:   assignment.workspaceId,
       performedBy,
       type:          ActivityType.SubmissionUploaded,
-      timestamp:     now,
+      timestamp:     isHistorical ? submission.submittedOn : now,
       assignmentId:  assignment.id,
       contributorId: assignment.contributorId,
-      metadata:      { submissionId: saved.id, revision: assignment.revisionCount },
+      metadata:      {
+        submissionId: saved.id,
+        revision: assignment.revisionCount,
+        ...(isHistorical ? { isHistorical: true, enteredOn: enteredOn || now.split('T')[0] } : {})
+      },
     });
 
     return saved;
@@ -155,6 +162,8 @@ export class SubmissionService implements ISubmissionService {
       submission,
       AssignmentStatus.Submitted,
       performedBy,
+      input.isHistorical,
+      input.enteredOn,
     );
   }
 
@@ -198,6 +207,8 @@ export class SubmissionService implements ISubmissionService {
       submission,
       AssignmentStatus.UnderReview,
       performedBy,
+      input.isHistorical,
+      input.enteredOn,
     );
   }
 

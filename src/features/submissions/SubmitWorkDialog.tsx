@@ -31,6 +31,8 @@ import {
 } from 'react';
 import { clsx } from 'clsx';
 
+import { useHistoricalMode } from '@app/HistoricalModeContext';
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface SubmitWorkFormValues {
@@ -39,6 +41,7 @@ export interface SubmitWorkFormValues {
   pullRequest:      string;
   demoLink:         string;
   notes:            string;
+  submittedOn?:     string;
 }
 
 const DEFAULT_VALUES: SubmitWorkFormValues = {
@@ -47,6 +50,7 @@ const DEFAULT_VALUES: SubmitWorkFormValues = {
   pullRequest:      '',
   demoLink:         '',
   notes:            '',
+  submittedOn:      '',
 };
 
 export type SubmissionMode = 'submit' | 'resubmit';
@@ -82,6 +86,7 @@ export function SubmitWorkDialog({
   onSubmit,
   onClose,
 }: SubmitWorkDialogProps) {
+  const { historicalMode } = useHistoricalMode();
   const dialogRef     = useRef<HTMLDialogElement>(null);
   const firstInputRef = useRef<HTMLTextAreaElement>(null);
   const [values, setValues] = useState<SubmitWorkFormValues>(DEFAULT_VALUES);
@@ -121,8 +126,18 @@ export function SubmitWorkDialog({
       setLocalError('Submission URL / Repository Link is required.');
       return;
     }
+    if (historicalMode && !values.submittedOn) {
+      setLocalError('Submitted On date is required in Historical Mode.');
+      return;
+    }
     setLocalError(null);
-    onSubmit(values);
+    onSubmit({
+      ...values,
+      ...(historicalMode ? {
+        isHistorical: true,
+        submittedOn: values.submittedOn,
+      } as any : {}),
+    });
   };
 
   const fieldClass = clsx(
@@ -181,6 +196,25 @@ export function SubmitWorkDialog({
       {/* Form */}
       <form onSubmit={handleSubmit} noValidate className="flex flex-col overflow-y-auto">
         <div className="flex flex-col gap-4 px-6 py-5">
+
+          {/* Historical Data Entry */}
+          {historicalMode && (
+            <div className="bg-surface-muted/30 p-3 rounded border border-dashed border-border/80">
+              <label htmlFor="s-submittedOn" className={labelClass}>
+                Submitted On <span className="text-danger">*</span>
+              </label>
+              <input
+                id="s-submittedOn"
+                name="submittedOn"
+                type="date"
+                required
+                value={values.submittedOn || ''}
+                onChange={handleChange}
+                className={clsx(fieldClass, 'cursor-pointer')}
+                disabled={submitting}
+              />
+            </div>
+          )}
 
           {/* Description */}
           <div>

@@ -18,6 +18,7 @@ import { ThemeProvider } from './ThemeProvider';
 import { ServiceProvider } from './ServiceContext';
 import { ShortcutProvider } from './ShortcutContext';
 import { SessionProvider } from './SessionContext';
+import { HistoricalModeProvider } from './HistoricalModeContext';
 import { ErrorBoundary } from '@shared/components/ErrorBoundary';
 import { router } from './router';
 import type { ApplicationComposition } from './composition';
@@ -32,9 +33,11 @@ export function App({ composition }: AppProps) {
       <ThemeProvider>
         <ServiceProvider services={composition.services}>
           <SessionProvider>
-            <ShortcutProvider>
-              <RouterProvider router={router} />
-            </ShortcutProvider>
+            <HistoricalModeProvider>
+              <ShortcutProvider>
+                <RouterProvider router={router} />
+              </ShortcutProvider>
+            </HistoricalModeProvider>
           </SessionProvider>
         </ServiceProvider>
       </ThemeProvider>

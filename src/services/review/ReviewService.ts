@@ -85,12 +85,13 @@ export class ReviewService implements IReviewService {
     assignmentId: EntityId,
     targetStatus: AssignmentStatus,
     extraFields: Partial<{ revisionCount: number }> = {},
+    updatedAtOverride?: string,
   ) {
     const assignment = await this.fetchAssignment(assignmentId);
     if (isDomainError(assignment)) return assignment;
 
     const now = new Date().toISOString();
-    const updated = { ...assignment, status: targetStatus, updatedAt: now, ...extraFields };
+    const updated = { ...assignment, status: targetStatus, updatedAt: updatedAtOverride ?? now, ...extraFields };
     return this.assignments.update(updated);
   }
 
@@ -148,10 +149,11 @@ export class ReviewService implements IReviewService {
     const _overallScore = calculateOverallScore(input.scores);
 
     const now = new Date().toISOString();
+    const isHist = !!input.isHistorical;
     const review: Review = {
       id:           generateId(),
-      createdAt:    now,
-      updatedAt:    now,
+      createdAt:    isHist ? input.reviewedOn : now,
+      updatedAt:    isHist ? input.reviewedOn : now,
       assignmentId: input.assignmentId,
       submissionId: input.submissionId,
       reviewedBy:   input.reviewedBy,
@@ -174,6 +176,8 @@ export class ReviewService implements IReviewService {
     const transitioned = await this.transitionAssignment(
       input.assignmentId,
       AssignmentStatus.Completed,
+      {},
+      isHist ? input.reviewedOn : undefined,
     );
     if (isDomainError(transitioned)) return transitioned;
 
@@ -182,13 +186,14 @@ export class ReviewService implements IReviewService {
       workspaceId:   assignment.workspaceId,
       performedBy,
       type:          ActivityType.ReviewPublished,
-      timestamp:     now,
+      timestamp:     isHist ? input.reviewedOn : now,
       assignmentId:  assignment.id,
       contributorId: assignment.contributorId,
       metadata: {
         reviewId:     saved.id,
         submissionId: saved.submissionId,
         overallScore: _overallScore.value,
+        ...(isHist ? { isHistorical: true, enteredOn: input.enteredOn || now.split('T')[0] } : {})
       },
     });
 
@@ -197,10 +202,13 @@ export class ReviewService implements IReviewService {
       workspaceId:   assignment.workspaceId,
       performedBy,
       type:          ActivityType.AssignmentCompleted,
-      timestamp:     now,
+      timestamp:     isHist ? input.reviewedOn : now,
       assignmentId:  assignment.id,
       contributorId: assignment.contributorId,
-      metadata:      { reviewId: saved.id },
+      metadata:      {
+        reviewId: saved.id,
+        ...(isHist ? { isHistorical: true, enteredOn: input.enteredOn || now.split('T')[0] } : {})
+      },
     });
 
     return saved;
@@ -211,6 +219,9 @@ export class ReviewService implements IReviewService {
     submissionId: EntityId,
     feedback: string,
     performedBy: EntityId,
+    reviewedOn?: string,
+    isHistorical?: boolean,
+    enteredOn?: string,
   ): Promise<Review | AnyDomainError> {
     // @permission Owner, Reviewer (assigned Reviewer only)
     const assignment = await this.fetchAssignment(assignmentId);
@@ -236,24 +247,27 @@ export class ReviewService implements IReviewService {
     }
 
     const now = new Date().toISOString();
+    const isHist = !!isHistorical;
+    const targetDate = isHist && reviewedOn ? reviewedOn : now;
 
     // Transition Assignment to RevisionRequested and increment revisionCount
     const transitioned = await this.transitionAssignment(
       assignmentId,
       AssignmentStatus.RevisionRequested,
       { revisionCount: assignment.revisionCount + 1 },
+      targetDate,
     );
     if (isDomainError(transitioned)) return transitioned;
 
     // Create a partial Review record to document the revision request
     const review: Review = {
       id:           generateId(),
-      createdAt:    now,
-      updatedAt:    now,
+      createdAt:    targetDate,
+      updatedAt:    targetDate,
       assignmentId,
       submissionId,
       reviewedBy:   performedBy,
-      reviewedOn:   now,
+      reviewedOn:   targetDate,
       scores: {
         technicalQuality: 0,
         documentation:    0,
@@ -274,7 +288,7 @@ export class ReviewService implements IReviewService {
       workspaceId:   assignment.workspaceId,
       performedBy,
       type:          ActivityType.RevisionRequested,
-      timestamp:     now,
+      timestamp:     targetDate,
       assignmentId,
       contributorId: assignment.contributorId,
       metadata: {
@@ -282,6 +296,7 @@ export class ReviewService implements IReviewService {
         submissionId,
         revisionCount: transitioned.revisionCount,
         feedback,
+        ...(isHist ? { isHistorical: true, enteredOn: enteredOn || now.split('T')[0] } : {})
       },
     });
 

@@ -30,8 +30,9 @@ import {
   type ChangeEvent,
 } from 'react';
 import { clsx } from 'clsx';
-import { AssignmentPriority } from '@domain';
+import { AssignmentPriority, AssignmentStatus } from '@domain';
 import type { Contributor, Milestone } from '@domain';
+import { useHistoricalMode } from '@app/HistoricalModeContext';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -43,6 +44,8 @@ export interface AssignmentFormValues {
   milestoneId:   string;
   priority:      AssignmentPriority;
   deadline:      string;
+  receivedOn?:   string;
+  initialStatus?: string;
 }
 
 const DEFAULT_VALUES: AssignmentFormValues = {
@@ -53,6 +56,8 @@ const DEFAULT_VALUES: AssignmentFormValues = {
   milestoneId:   '',
   priority:      AssignmentPriority.Medium,
   deadline:      '',
+  receivedOn:    '',
+  initialStatus: '',
 };
 
 interface AssignmentFormDialogProps {
@@ -96,6 +101,7 @@ export function AssignmentFormDialog({
   onSubmit,
   onClose,
 }: AssignmentFormDialogProps) {
+  const { historicalMode } = useHistoricalMode();
   const dialogRef   = useRef<HTMLDialogElement>(null);
   const firstInputRef = useRef<HTMLInputElement>(null);
 
@@ -130,14 +136,22 @@ export function AssignmentFormDialog({
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (submitting) return;
-    onSubmit(values);
+    onSubmit({
+      ...values,
+      ...(historicalMode ? {
+        isHistorical: true,
+        receivedOn: values.receivedOn,
+        initialStatus: values.initialStatus,
+      } as any : {}),
+    });
   };
 
   const isSubmitDisabled =
     submitting ||
     !values.title.trim() ||
     !values.contributorId ||
-    !values.deadline;
+    !values.deadline ||
+    (historicalMode && (!values.receivedOn || !values.initialStatus));
 
   const fieldClass = clsx(
     'w-full rounded-md border border-border bg-surface px-3 py-2',
@@ -286,6 +300,56 @@ export function AssignmentFormDialog({
             </div>
           </div>
 
+          {/* Historical Data Entry fields */}
+          {historicalMode && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-surface-muted/30 p-3 rounded border border-dashed border-border/80">
+              <div>
+                <label htmlFor="a-receivedOn" className={labelClass}>
+                  Received On {requiredMark}
+                </label>
+                <input
+                  id="a-receivedOn"
+                  name="receivedOn"
+                  type="date"
+                  required
+                  value={values.receivedOn || ''}
+                  onChange={handleChange}
+                  className={clsx(fieldClass, 'cursor-pointer')}
+                  disabled={submitting}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="a-initialStatus" className={labelClass}>
+                  Initial Status {requiredMark}
+                </label>
+                <div className="relative">
+                  <select
+                    id="a-initialStatus"
+                    name="initialStatus"
+                    required
+                    value={values.initialStatus || ''}
+                    onChange={handleChange}
+                    className={clsx(fieldClass, 'pr-8 cursor-pointer appearance-none')}
+                    disabled={submitting}
+                  >
+                    <option value="">Select status</option>
+                    <option value={AssignmentStatus.Assigned}>Assigned</option>
+                    <option value={AssignmentStatus.Accepted}>Accepted</option>
+                    <option value={AssignmentStatus.InProgress}>In Progress</option>
+                    <option value={AssignmentStatus.Completed}>Completed</option>
+                  </select>
+                  <svg className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted"
+                    xmlns="http://www.w3.org/2000/svg" width={10} height={10} viewBox="0 0 24 24"
+                    fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round"
+                    strokeLinejoin="round" aria-hidden="true">
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Deadline + Reviewer row */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
@@ -297,7 +361,7 @@ export function AssignmentFormDialog({
                 name="deadline"
                 type="date"
                 required
-                min={todayISO()}
+                min={historicalMode ? undefined : todayISO()}
                 value={values.deadline}
                 onChange={handleChange}
                 className={clsx(fieldClass, 'cursor-pointer')}

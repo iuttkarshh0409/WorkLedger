@@ -27,8 +27,8 @@ export {
   domainError,
 } from './errors';
 
-export { calculateOverallScore } from './scoring';
-export type { OverallScore } from './scoring';
+export { calculateOverallScore, getPerformanceRating } from './scoring';
+export type { OverallScore, PerformanceRating } from './scoring';
 
 export { getOrCreateDemoWorkspace, DEMO_OWNER_ID } from './bootstrap';
 

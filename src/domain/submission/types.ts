@@ -22,6 +22,8 @@ export interface CreateSubmissionInput {
   pullRequest?: string;
   demoLink?: string;
   notes?: string;
+  isHistorical?: boolean;
+  enteredOn?: string;
 }
 
 /**

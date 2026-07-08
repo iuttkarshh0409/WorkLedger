@@ -14,7 +14,7 @@ import {
   ActivityType,
 } from '@domain';
 import { ProgressBar } from '@shared/components/ProgressBar';
-import { calculateOverallScore } from '@lib/scoring';
+import { calculateOverallScore, getPerformanceRating } from '@lib/scoring';
 import { contributorProfilePath, assignmentsWithFilter } from '@shared/constants/routes';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -106,7 +106,7 @@ export function WorkspaceHealth({
     { label: 'Active Contributors', value: activeContributors, to: '/contributors', success: true },
     { label: 'Total Assignments', value: totalAssignments, to: '/assignments' },
     { label: 'Completion Rate', value: `${completionRate}%` },
-    { label: 'Avg Review Score', value: avgReviewScore > 0 ? `${avgReviewScore} / 5` : '—' },
+    { label: 'Avg Review Score', value: avgReviewScore > 0 ? `${avgReviewScore} / 10` : '—' },
     { label: 'Pending Reviews', value: pendingReviews, warning: pendingReviews > 0, to: assignmentsWithFilter('Submitted') },
     { label: 'Overdue Assignments', value: overdueAssignments, danger: overdueAssignments > 0 },
     { label: 'Active Milestones', value: activeMilestones, to: '/milestones' },
@@ -240,10 +240,10 @@ export function ContributorInsights({
               )}
             >
               {key === 'completed'
-                ? 'Completed Tasks'
+                ? `Completed Tasks${sortKey === 'completed' ? ' ▼' : ''}`
                 : key === 'avgScore'
-                ? 'Avg Score'
-                : 'Completion Rate'}
+                ? `Avg Score${sortKey === 'avgScore' ? ' ▼' : ''}`
+                : `Completion Rate${sortKey === 'completionRate' ? ' ▼' : ''}`}
             </button>
           ))}
         </div>
@@ -267,18 +267,39 @@ export function ContributorInsights({
                 <td className="py-3 pr-4 font-medium text-text-primary">
                   <Link
                     to={contributorProfilePath(d.id)}
-                    className="hover:text-accent hover:underline font-semibold"
+                    className="hover:text-accent hover:underline font-semibold block"
                   >
                     {d.name}
                   </Link>
-                  <span className="block text-[10px] text-text-muted font-normal">{d.role}</span>
+                  {d.avgScore > 0 && (
+                    <div className="mt-0.5 flex">
+                      <span className={clsx("inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-semibold ring-1 ring-inset", getPerformanceRating(d.avgScore).colorClass)}>
+                        <span className={clsx("h-1 w-1 rounded-full", getPerformanceRating(d.avgScore).dotColorClass)} />
+                        <span>{getPerformanceRating(d.avgScore).label}</span>
+                      </span>
+                    </div>
+                  )}
+                  <span className="block text-[10px] text-text-muted font-normal mt-0.5">{d.role}</span>
                 </td>
                 <td className="py-3 px-2 text-center text-text-primary font-medium">{d.completed}</td>
                 <td className="py-3 px-2 text-center text-text-secondary">{d.active}</td>
                 <td className="py-3 px-2 text-center font-semibold text-text-primary">
-                  {d.avgScore > 0 ? `${d.avgScore} / 5` : '—'}
+                  {d.avgScore > 0 ? `${d.avgScore} / 10` : '—'}
                 </td>
-                <td className="py-3 px-2 text-center text-text-secondary">{d.completionRate}%</td>
+                <td
+                  className={clsx(
+                    'py-3 px-2 text-center',
+                    d.completionRate === 100
+                      ? 'text-green-600 font-medium'
+                      : d.completionRate >= 75
+                      ? 'text-blue-600 font-medium'
+                      : d.completionRate >= 50
+                      ? 'text-amber-600 font-medium'
+                      : 'text-red-500 font-medium'
+                  )}
+                >
+                  {d.completionRate}%
+                </td>
                 <td className="py-3 pl-4 text-center">
                   <span
                     className={clsx(
@@ -290,7 +311,7 @@ export function ContributorInsights({
                         : 'bg-green-50 text-green-700 ring-1 ring-inset ring-green-600/20'
                     )}
                   >
-                    {d.workload} active
+                    {d.workload === 0 ? 'Available' : `${d.workload} active`}
                   </span>
                 </td>
               </tr>
@@ -640,10 +661,11 @@ export function ReviewInsights({
 
   // Score distribution counts
   const scoreBuckets = [
-    { label: 'Excellent (4.5–5.0)', filter: (s: number) => s >= 4.5 && s <= 5.0 },
-    { label: 'Proficient (3.5–4.4)', filter: (s: number) => s >= 3.5 && s < 4.5 },
-    { label: 'Developing (2.5–3.4)', filter: (s: number) => s >= 2.5 && s < 3.5 },
-    { label: 'Unsatisfactory (< 2.5)', filter: (s: number) => s < 2.5 },
+    { label: 'Outstanding (9.0–10.0)', filter: (s: number) => s >= 9.0 && s <= 10.0 },
+    { label: 'Excellent (8.0–8.9)', filter: (s: number) => s >= 8.0 && s < 9.0 },
+    { label: 'Good (7.0–7.9)', filter: (s: number) => s >= 7.0 && s < 8.0 },
+    { label: 'Satisfactory (6.0–6.9)', filter: (s: number) => s >= 6.0 && s < 7.0 },
+    { label: 'Needs Improvement (< 6.0)', filter: (s: number) => s < 6.0 },
   ];
 
   const distribution = scoreBuckets.map((b) => {
@@ -666,9 +688,17 @@ export function ReviewInsights({
             <span className="block text-[10px] text-text-muted font-bold uppercase tracking-wider">
               Workspace Avg Score
             </span>
-            <span className="text-xl font-bold text-text-primary mt-1">
-              {avgWorkspaceScore > 0 ? `${avgWorkspaceScore} / 5` : '—'}
-            </span>
+            <div className="flex flex-col items-start gap-2.5 mt-1">
+              <span className="text-xl font-bold text-text-primary">
+                {avgWorkspaceScore > 0 ? `${avgWorkspaceScore} / 10` : '—'}
+              </span>
+              {avgWorkspaceScore > 0 && (
+                <span className={clsx("inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-semibold ring-1 ring-inset", getPerformanceRating(avgWorkspaceScore).colorClass)}>
+                  <span className={clsx("h-1 w-1 rounded-full", getPerformanceRating(avgWorkspaceScore).dotColorClass)} />
+                  <span>{getPerformanceRating(avgWorkspaceScore).label}</span>
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="bg-surface-secondary border border-border rounded p-3">
@@ -695,19 +725,29 @@ export function ReviewInsights({
               <span className="text-text-primary font-bold text-orange-600">{revisionRequests}</span>
             </div>
             {highestContributor && (
-              <div>
-                <span className="block text-[10px] text-text-muted font-semibold">Highest Average Rating</span>
-                <span className="text-text-primary font-medium text-green-600">
-                  {highestContributor.name} ({highestContributor.avg} / 5)
-                </span>
+              <div className="space-y-1">
+                <span className="block text-[10px] text-text-muted font-semibold">🏆 Highest Rated</span>
+                <span className="block text-text-primary font-bold text-xs">{highestContributor.name}</span>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-text-secondary font-semibold text-[11px]">{highestContributor.avg} / 10</span>
+                  <span className={clsx("inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-semibold ring-1 ring-inset", getPerformanceRating(highestContributor.avg).colorClass)}>
+                    <span className={clsx("h-1 w-1 rounded-full", getPerformanceRating(highestContributor.avg).dotColorClass)} />
+                    <span>{getPerformanceRating(highestContributor.avg).label}</span>
+                  </span>
+                </div>
               </div>
             )}
             {lowestContributor && (
-              <div>
-                <span className="block text-[10px] text-text-muted font-semibold">Lowest Average Rating</span>
-                <span className="text-text-primary font-medium text-red-500">
-                  {lowestContributor.name} ({lowestContributor.avg} / 5)
-                </span>
+              <div className="space-y-1">
+                <span className="block text-[10px] text-text-muted font-semibold">📉 Lowest Rated</span>
+                <span className="block text-text-primary font-bold text-xs">{lowestContributor.name}</span>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-text-secondary font-semibold text-[11px]">{lowestContributor.avg} / 10</span>
+                  <span className={clsx("inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-semibold ring-1 ring-inset", getPerformanceRating(lowestContributor.avg).colorClass)}>
+                    <span className={clsx("h-1 w-1 rounded-full", getPerformanceRating(lowestContributor.avg).dotColorClass)} />
+                    <span>{getPerformanceRating(lowestContributor.avg).label}</span>
+                  </span>
+                </div>
               </div>
             )}
           </div>
@@ -718,7 +758,7 @@ export function ReviewInsights({
           <h4 className="font-semibold text-text-primary border-b border-border/50 pb-1">Score Distribution</h4>
           <div className="space-y-2.5">
             {distribution.map((d, idx) => (
-              <div key={idx} className="space-y-1">
+              <div key={idx} className={clsx("space-y-1", d.count === 0 && 'opacity-40')}>
                 <div className="flex justify-between text-[10px]">
                   <span className="text-text-secondary font-medium">{d.label}</span>
                   <span className="text-text-muted">{d.count}</span>

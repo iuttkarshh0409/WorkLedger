@@ -22,6 +22,8 @@ export interface CreateReviewInput {
   strengths?: string[];
   improvements?: string[];
   feedback?: string;
+  isHistorical?: boolean;
+  enteredOn?: string;
 }
 
 /**

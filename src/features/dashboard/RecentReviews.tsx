@@ -14,9 +14,9 @@ import type { ReviewSummaryItem } from './useDashboard';
 
 function ScoreBadge({ score }: { score: number }) {
   const cls =
-    score === 0        ? 'text-text-muted'  :
-    score < 4          ? 'text-danger'       :
-    score < 6          ? 'text-warning'      :
+    score === 0        ? 'text-text-muted'   :
+    score < 6          ? 'text-danger'       :
+    score < 7          ? 'text-orange-600'   :
     score < 8          ? 'text-amber-600'    :
     score < 9          ? 'text-green-600'    :
                          'text-green-700';

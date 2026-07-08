@@ -19,8 +19,9 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { clsx } from 'clsx';
 import type { ReviewScores } from '@domain';
-import { calculateOverallScore } from '@lib/scoring';
+import { calculateOverallScore, getPerformanceRating } from '@lib/scoring';
 import type { PublishReviewInput, RequestRevisionInput } from './useReviews';
+import { useHistoricalMode } from '@app/HistoricalModeContext';
 
 // ─── Score categories ─────────────────────────────────────────────────────────
 
@@ -34,12 +35,12 @@ const SCORE_CATEGORIES: { key: keyof ReviewScores; label: string; description: s
 ];
 
 const DEFAULT_SCORES: ReviewScores = {
-  technicalQuality: 0,
-  documentation:    0,
-  communication:    0,
-  ownership:        0,
-  problemSolving:   0,
-  timeliness:       0,
+  technicalQuality: 1,
+  documentation:    1,
+  communication:    1,
+  ownership:        1,
+  problemSolving:   1,
+  timeliness:       1,
 };
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -56,20 +57,14 @@ interface ReviewFormProps {
 // ─── Score slider helper ──────────────────────────────────────────────────────
 
 function scoreLabel(score: number): string {
-  if (score === 0) return 'Not evaluated';
-  if (score <= 2)  return 'Poor';
-  if (score <= 4)  return 'Needs improvement';
-  if (score <= 6)  return 'Satisfactory';
-  if (score <= 8)  return 'Good';
-  return 'Exceptional';
+  return getPerformanceRating(score).label;
 }
 
 function scoreColor(score: number): string {
-  if (score === 0) return 'text-text-muted';
-  if (score <= 2)  return 'text-danger';
-  if (score <= 4)  return 'text-orange-600';
-  if (score <= 6)  return 'text-amber-600';
-  if (score <= 8)  return 'text-green-600';
+  if (score < 6)  return 'text-danger';
+  if (score < 7)  return 'text-orange-600';
+  if (score < 8)  return 'text-amber-600';
+  if (score < 9)  return 'text-green-600';
   return 'text-green-700';
 }
 
@@ -83,11 +78,14 @@ export function ReviewForm({
   onRevision,
   onCancel,
 }: ReviewFormProps) {
+  const { historicalMode } = useHistoricalMode();
   const [scores, setScores]           = useState<ReviewScores>(DEFAULT_SCORES);
   const [strengths, setStrengths]     = useState('');
   const [improvements, setImprovements] = useState('');
   const [feedback, setFeedback]       = useState('');
   const [mode, setMode]               = useState<'publish' | 'revision'>('publish');
+  const [reviewedOn, setReviewedOn]   = useState('');
+  const [localError, setLocalError]   = useState<string | null>(null);
 
   const overall = calculateOverallScore(scores);
 
@@ -99,6 +97,17 @@ export function ReviewForm({
     e.preventDefault();
     if (submitting) return;
 
+    if (historicalMode && !reviewedOn) {
+      setLocalError('Reviewed On date is required in Historical Mode.');
+      return;
+    }
+    setLocalError(null);
+
+    const histParams = historicalMode ? {
+      isHistorical: true,
+      reviewedOn,
+    } : {};
+
     if (mode === 'publish') {
       onPublish({
         submissionId,
@@ -106,9 +115,14 @@ export function ReviewForm({
         strengths:    strengths.split('\n').map((s) => s.trim()).filter(Boolean),
         improvements: improvements.split('\n').map((s) => s.trim()).filter(Boolean),
         feedback,
+        ...histParams,
       });
     } else {
-      onRevision({ submissionId, feedback });
+      onRevision({
+        submissionId,
+        feedback,
+        ...histParams,
+      });
     }
   };
 
@@ -144,6 +158,25 @@ export function ReviewForm({
         ))}
       </div>
 
+      {/* Historical Data Entry */}
+      {historicalMode && (
+        <div className="bg-surface-muted/30 p-3 rounded border border-dashed border-border/80">
+          <label htmlFor="r-reviewedOn" className={labelClass}>
+            Reviewed On <span className="text-danger">*</span>
+          </label>
+          <input
+            id="r-reviewedOn"
+            name="reviewedOn"
+            type="date"
+            required
+            value={reviewedOn}
+            onChange={(e) => setReviewedOn(e.target.value)}
+            className={clsx(fieldClass, 'cursor-pointer')}
+            disabled={submitting}
+          />
+        </div>
+      )}
+
       {/* Score inputs — publish mode only */}
       {mode === 'publish' && (
         <div className="flex flex-col gap-3">
@@ -165,13 +198,13 @@ export function ReviewForm({
                     {label}
                   </label>
                   <span className={clsx('text-xs font-medium', scoreColor(score))}>
-                    {score === 0 ? '—' : score} · {scoreLabel(score)}
+                    {score} / 10 · {scoreLabel(score)}
                   </span>
                 </div>
                 <input
                   id={`score-${key}`}
                   type="range"
-                  min={0}
+                  min={1}
                   max={10}
                   step={1}
                   value={score}
@@ -250,9 +283,9 @@ export function ReviewForm({
       </div>
 
       {/* Error */}
-      {error && (
+      {(localError || error) && (
         <div role="alert" className="rounded-md bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700">
-          {error}
+          {localError || error}
         </div>
       )}
 

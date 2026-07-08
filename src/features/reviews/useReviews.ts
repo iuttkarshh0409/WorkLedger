@@ -42,11 +42,15 @@ export interface PublishReviewInput {
   strengths:    string[];
   improvements: string[];
   feedback:     string;
+  reviewedOn?:  string;
+  isHistorical?: boolean;
 }
 
 export interface RequestRevisionInput {
   submissionId: EntityId;
   feedback:     string;
+  reviewedOn?:  string;
+  isHistorical?: boolean;
 }
 
 interface UseReviewsState {
@@ -140,16 +144,23 @@ export function useReviews(
 
       setState((s) => ({ ...s, submitting: true, submitError: null }));
 
+      const isHist = !!input.isHistorical;
+      const reviewDate = input.reviewedOn ? new Date(input.reviewedOn).toISOString() : new Date().toISOString();
+
       const actId = session ? session.contributorId : DEMO_OWNER_ID;
       const reviewInput: CreateReviewInput = {
         assignmentId,
         submissionId: input.submissionId,
         reviewedBy:   actId,
-        reviewedOn:   new Date().toISOString(),
+        reviewedOn:   reviewDate,
         scores:       input.scores,
         strengths:    input.strengths,
         improvements: input.improvements,
         feedback:     input.feedback,
+        ...(isHist ? {
+          isHistorical: true,
+          enteredOn: new Date().toISOString().split('T')[0],
+        } : {}),
       };
 
       const result = await reviewService.publishReview(reviewInput, actId);
@@ -235,6 +246,7 @@ export function useReviews(
                 milestone: milestoneName,
                 overallScore: score,
                 feedback: result.feedback,
+                ...(input.isHistorical ? { isHistorical: true, enteredOn: new Date().toISOString().split('T')[0] } : {})
               },
             },
           });
@@ -256,12 +268,18 @@ export function useReviews(
 
       setState((s) => ({ ...s, submitting: true, submitError: null }));
 
+      const isHist = !!input.isHistorical;
+      const reviewDate = input.reviewedOn ? new Date(input.reviewedOn).toISOString() : new Date().toISOString();
+
       const actId = session ? session.contributorId : DEMO_OWNER_ID;
       const result = await reviewService.requestRevision(
         assignmentId,
         input.submissionId,
         input.feedback,
         actId,
+        reviewDate,
+        isHist,
+        isHist ? new Date().toISOString().split('T')[0] : undefined,
       );
 
       if (isDomainError(result)) {
@@ -341,6 +359,7 @@ export function useReviews(
                 reviewer: actName,
                 milestone: milestoneName,
                 feedback: result.feedback,
+                ...(input.isHistorical ? { isHistorical: true, enteredOn: new Date().toISOString().split('T')[0] } : {})
               },
             },
           });

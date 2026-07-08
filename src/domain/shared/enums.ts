@@ -90,7 +90,7 @@ export enum WorkspaceStatus {
 // integer values (0–10) can be used directly in arithmetic.
 // The ReviewScore type enforces this range at the type level.
 
-export const REVIEW_SCORE_MIN = 0;
+export const REVIEW_SCORE_MIN = 1;
 export const REVIEW_SCORE_MAX = 10;
 
 // ─── Activity Type ────────────────────────────────────────────────────────────

@@ -7,3 +7,4 @@
 
 export * from './composition';
 export * from './ServiceContext';
+export * from './HistoricalModeContext';

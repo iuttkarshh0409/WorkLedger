@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useSession } from '@app/SessionContext';
 import { useServices } from '@hooks/useServices';
 import { isDomainError } from '@lib/errors';
+import { calculateOverallScore } from '@lib/scoring';
 import {
   WorkspaceSnapshot,
   WorkspaceHealth,
@@ -180,18 +181,7 @@ export function AnalyticsPage() {
       : 0;
 
   const validScores = filteredReviews
-    .map((r) => {
-      const overall = r.scores
-        ? (r.scores.technicalQuality +
-            r.scores.documentation +
-            r.scores.communication +
-            r.scores.ownership +
-            r.scores.problemSolving +
-            r.scores.timeliness) /
-          6
-        : 0;
-      return overall;
-    })
+    .map((r) => calculateOverallScore(r.scores).value)
     .filter((v) => v > 0);
 
   const avgReviewScore =

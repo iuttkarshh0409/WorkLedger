@@ -11,7 +11,7 @@
 
 import { clsx } from 'clsx';
 import type { Review, Contributor } from '@domain';
-import { calculateOverallScore } from '@lib/scoring';
+import { calculateOverallScore, getPerformanceRating } from '@lib/scoring';
 
 // ─── Score category labels ────────────────────────────────────────────────────
 
@@ -34,20 +34,16 @@ function formatDate(iso: string): string {
 
 function scoreColor(score: number): string {
   if (score === 0) return 'text-text-muted';
-  if (score <= 2)  return 'text-danger';
-  if (score <= 4)  return 'text-orange-600';
-  if (score <= 6)  return 'text-amber-600';
-  if (score <= 8)  return 'text-green-600';
+  if (score < 6)  return 'text-danger';
+  if (score < 7)  return 'text-orange-600';
+  if (score < 8)  return 'text-amber-600';
+  if (score < 9)  return 'text-green-600';
   return 'text-green-700 font-semibold';
 }
 
 function scoreLabel(score: number): string {
   if (score === 0) return '—';
-  if (score <= 2)  return 'Poor';
-  if (score <= 4)  return 'Needs improvement';
-  if (score <= 6)  return 'Satisfactory';
-  if (score <= 8)  return 'Good';
-  return 'Exceptional';
+  return getPerformanceRating(score).label;
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -78,13 +74,24 @@ export function ReviewCard({ review, reviewer, isRevisionRequest = false }: Revi
         </div>
 
         {hasScores && !isRevisionRequest && (
-          <div className="text-right shrink-0">
-            <p className="text-lg font-semibold text-text-primary leading-none">
-              {overall.value.toFixed(1)}
-            </p>
-            <p className="text-xs text-text-muted mt-0.5">
-              / 10 overall
-            </p>
+          <div className="text-right shrink-0 text-xs text-text-secondary bg-surface-muted/30 p-3 rounded-lg border border-border flex flex-col gap-1.5 items-end justify-center">
+            <div className="flex flex-col items-end gap-1">
+              <div>
+                <span className="font-semibold text-text-muted">Performance</span>{' '}
+                <span className="font-bold text-text-primary text-sm">{overall.value.toFixed(1)}</span>{' '}
+                <span className="text-text-muted">/ 10</span>
+              </div>
+              <span className={clsx("inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-semibold ring-1 ring-inset", getPerformanceRating(overall.value).colorClass)}>
+                <span className={clsx("h-1.5 w-1.5 rounded-full", getPerformanceRating(overall.value).dotColorClass)} />
+                <span>{getPerformanceRating(overall.value).label}</span>
+              </span>
+            </div>
+            <div className="divider w-full my-0.5" />
+            <div>
+              <span className="font-semibold text-text-muted">Total</span>{' '}
+              <span className="font-bold text-text-primary">{Object.values(review.scores).reduce((a, b) => a + b, 0)}</span>{' '}
+              <span className="text-text-muted">/ 60</span>
+            </div>
           </div>
         )}
       </div>

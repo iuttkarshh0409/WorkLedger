@@ -135,10 +135,17 @@ export function useSubmissions(
 
       setState((s) => ({ ...s, submitting: true, submitError: null }));
 
+      const isHist = !!(input as any).isHistorical;
+      const submittedDate = (input as any).submittedOn ? new Date((input as any).submittedOn).toISOString() : new Date().toISOString();
+
       const fullInput: CreateSubmissionInput = {
         ...input,
         assignmentId,
-        submittedOn: new Date().toISOString(),
+        submittedOn: submittedDate,
+        ...(isHist ? {
+          isHistorical: true,
+          enteredOn: new Date().toISOString().split('T')[0],
+        } : {})
       };
 
       const actId = session ? session.contributorId : DEMO_OWNER_ID;
@@ -174,15 +181,14 @@ export function useSubmissions(
           const workspace = await workspaceService.getWorkspaceById(refreshed.workspaceId);
           const wsName = (workspace && !isDomainError(workspace)) ? workspace.name : 'Unknown Workspace';
           const actorResult = await contributorService.getContributorsByWorkspace(refreshed.workspaceId);
-          
-          const actName = session ? session.name : 'Contributor';
-          const actRole = session ? session.role : 'Contributor';
-
           const reviewer = (actorResult && !isDomainError(actorResult)) ? actorResult.find(c => c.id === refreshed.reviewerId) : null;
           const reviewerName = reviewer ? reviewer.name : 'Unassigned';
 
           const milestone = refreshed.milestoneId ? await milestoneService.getMilestoneById(refreshed.milestoneId) : null;
           const milestoneName = (milestone && !isDomainError(milestone)) ? milestone.title : 'Unassigned';
+          
+          const actName = session ? session.name : 'Contributor';
+          const actRole = session ? session.role : 'Contributor';
 
           await logEvent({
             message: `${actName} uploaded submission for '${refreshed.title}'.`,
@@ -225,6 +231,7 @@ export function useSubmissions(
                 assignee: actName,
                 reviewer: reviewerName,
                 milestone: milestoneName,
+                ...(isHist ? { isHistorical: true, enteredOn: new Date().toISOString().split('T')[0] } : {})
               },
             },
           });

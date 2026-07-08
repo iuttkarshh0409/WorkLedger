@@ -38,6 +38,48 @@ const SCORE_KEYS: ReadonlyArray<keyof ReviewScores> = [
   'timeliness',
 ];
 
+export interface PerformanceRating {
+  label: string;
+  colorClass: string;
+  dotColorClass: string;
+}
+
+export function getPerformanceRating(score: number): PerformanceRating {
+  if (score >= 9.0) {
+    return {
+      label: 'Outstanding',
+      colorClass: 'bg-green-50 text-green-700 ring-green-600/20',
+      dotColorClass: 'bg-green-600',
+    };
+  }
+  if (score >= 8.0) {
+    return {
+      label: 'Excellent',
+      colorClass: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20',
+      dotColorClass: 'bg-emerald-600',
+    };
+  }
+  if (score >= 7.0) {
+    return {
+      label: 'Good',
+      colorClass: 'bg-blue-50 text-blue-700 ring-blue-600/20',
+      dotColorClass: 'bg-blue-600',
+    };
+  }
+  if (score >= 6.0) {
+    return {
+      label: 'Satisfactory',
+      colorClass: 'bg-amber-50 text-amber-700 ring-amber-600/20',
+      dotColorClass: 'bg-amber-500',
+    };
+  }
+  return {
+    label: 'Needs Improvement',
+    colorClass: 'bg-red-50 text-red-700 ring-red-600/20',
+    dotColorClass: 'bg-red-600',
+  };
+}
+
 /**
  * calculateOverallScore
  *

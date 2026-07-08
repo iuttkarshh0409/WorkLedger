@@ -56,11 +56,16 @@ export class ContributorService implements IContributorService {
     input: CreateContributorInput,
     performedBy: EntityId,
   ): Promise<Contributor | AnyDomainError> {
-    const actor = await this.contributors.findById(performedBy);
-    if (isDomainError(actor)) return actor;
-    if (actor === null) return notFound('Contributor', performedBy);
-    if (!Authorization.canArchiveContributor(actor.role)) {
-      return permissionDenied('ContributorService.addContributor', `Role "${actor.role}" is not authorized.`);
+    const existing = await this.contributors.findByWorkspace(input.workspaceId);
+    if (isDomainError(existing)) return existing;
+
+    if (existing.length > 0) {
+      const actor = await this.contributors.findById(performedBy);
+      if (isDomainError(actor)) return actor;
+      if (actor === null) return notFound('Contributor', performedBy);
+      if (!Authorization.canArchiveContributor(actor.role)) {
+        return permissionDenied('ContributorService.addContributor', `Role "${actor.role}" is not authorized.`);
+      }
     }
 
     const inputValidation = validateCreateContributorInput(input);

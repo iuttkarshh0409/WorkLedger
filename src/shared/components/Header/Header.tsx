@@ -19,7 +19,9 @@ import { clsx } from 'clsx';
 import { Icon } from '@shared/components/Icon';
 import { PRIMARY_NAV_ITEMS } from '@shared/constants/navigation';
 import { useSession } from '@app/SessionContext';
+import { useHistoricalMode } from '@app/HistoricalModeContext';
 import { contributorProfilePath } from '@shared/constants/routes';
+import { ContributorRole } from '@domain';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -44,6 +46,7 @@ export function Header({ className }: HeaderProps) {
   const { pathname } = useLocation();
   const pageTitle = resolvePageTitle(pathname);
   const { session, logout } = useSession();
+  const { historicalMode, setHistoricalMode } = useHistoricalMode();
 
   const initials = session
     ? session.name
@@ -116,9 +119,22 @@ export function Header({ className }: HeaderProps) {
         </svg>
       </button>
 
-      {/* User profile and details */}
       {session && (
         <div className="flex items-center gap-2 border-l border-border pl-4">
+          {session.role === ContributorRole.Owner && (
+            <label className="flex items-center gap-2 cursor-pointer mr-2 border-r border-border pr-4 h-8 select-none">
+              <input
+                type="checkbox"
+                checked={historicalMode}
+                onChange={(e) => setHistoricalMode(e.target.checked)}
+                className="w-4 h-4 rounded border-border text-accent focus:ring-accent"
+              />
+              <span className="text-xs font-semibold text-text-secondary whitespace-nowrap">
+                Historical Data Entry
+              </span>
+            </label>
+          )}
+
           <Link
             to={contributorProfilePath(session.contributorId)}
             title="View Profile"

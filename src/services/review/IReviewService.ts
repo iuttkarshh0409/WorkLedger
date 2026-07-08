@@ -72,6 +72,9 @@ export interface IReviewService {
     submissionId: EntityId,
     feedback: string,
     performedBy: EntityId,
+    reviewedOn?: string,
+    isHistorical?: boolean,
+    enteredOn?: string,
   ): Promise<Review | AnyDomainError>;
 
   /**

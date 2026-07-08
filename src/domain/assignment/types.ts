@@ -26,6 +26,9 @@ export interface CreateAssignmentInput {
   assignedOn: Timestamp;
   deadline: Timestamp;
   status?: AssignmentStatus;
+  isHistorical?: boolean;
+  enteredOn?: string;
+  createdAt?: Timestamp;
 }
 
 /**
