@@ -2,7 +2,10 @@ import { AnyDomainError } from '@domain';
 import { validationError, notFound, conflict, permissionDenied, domainError } from '@lib/errors';
 import { perfState, logPerformanceEvent } from '@infrastructure/logging';
 
-export const API_BASE_URL = 'http://localhost:3001/api/v1';
+const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+export const API_BASE_URL = isProduction
+  ? 'https://workledger-backend.dubeutkarsh7.workers.dev/api/v1'
+  : 'http://localhost:3001/api/v1';
 
 export interface ApiResponse<T> {
   success: boolean;
