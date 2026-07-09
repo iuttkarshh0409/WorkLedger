@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { randomUUID } from 'crypto';
 import { AsyncLocalStorage } from 'async_hooks';
 import { writePerfLogsBatch } from '../services/logger.js';
+import { getEnv } from '../env.js';
 
 export interface RequestContext {
   requestId: string;
@@ -18,16 +19,18 @@ export const requestContextStorage = new AsyncLocalStorage<RequestContext>();
  * Middleware to generate and attach a unique request ID.
  */
 export function requestIdMiddleware(req: Request, res: Response, next: NextFunction): void {
+  const isUuid = (val: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
+  const rawRequestId = req.header('X-Request-ID');
+  const requestId = (rawRequestId && isUuid(rawRequestId)) ? rawRequestId : randomUUID();
+
   // If performance logging is disabled, don't execute any profiling or proxy logic
-  if (process.env.PERFORMANCE_LOGGING !== 'true') {
-    const requestId = req.header('X-Request-ID') || randomUUID();
+  if (getEnv('PERFORMANCE_LOGGING') !== 'true') {
     req.requestId = requestId;
     res.setHeader('X-Request-ID', requestId);
     next();
     return;
   }
 
-  const requestId = req.header('X-Request-ID') || randomUUID();
   req.requestId = requestId;
   res.setHeader('X-Request-ID', requestId);
 
@@ -54,7 +57,7 @@ export function requestIdMiddleware(req: Request, res: Response, next: NextFunct
   };
 
   requestContextStorage.run(context, () => {
-    res.on('finish', async () => {
+    res.on('finish', () => {
       const durationMs = performance.now() - start;
 
       // Avoid infinite loop of performance logging when logging endpoint itself is called
@@ -101,7 +104,18 @@ export function requestIdMiddleware(req: Request, res: Response, next: NextFunct
       const isSampled = isSlow || Math.random() < 0.1;
 
       if (isSampled) {
-        await writePerfLogsBatch(context.bufferedEvents);
+        const isCloudflare = typeof (globalThis as any).WebSocketPair !== 'undefined' || !!(globalThis as any).MIN_ENV;
+        if (isCloudflare) {
+          // Log synchronously to console in Cloudflare Worker environment to prevent hanging/microtask leaks
+          for (const logEvent of context.bufferedEvents) {
+            console.log('[Performance Log]', JSON.stringify(logEvent));
+          }
+        } else {
+          // Log asynchronously in Node environment to avoid blocking event loop
+          writePerfLogsBatch(context.bufferedEvents).catch((err) => {
+            console.error('[Error] Failed to write performance log batch:', err);
+          });
+        }
       }
     });
 
@@ -174,6 +188,12 @@ export function errorHandler(
   next: NextFunction
 ): void {
   console.error(`[Error] Request ${req.requestId || 'N/A'} failed:`, err);
+
+  const origin = req.headers.origin;
+  if (origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  }
 
   const code = err.code || 'INTERNAL_SERVER_ERROR';
   const message = err.message || 'An unexpected error occurred.';

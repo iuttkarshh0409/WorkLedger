@@ -1,6 +1,7 @@
 import { AnyDomainError } from '@domain';
 import { validationError, notFound, conflict, permissionDenied, domainError } from '@lib/errors';
 import { perfState, logPerformanceEvent } from '@infrastructure/logging';
+import { generateId } from '@lib/id';
 
 const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
 export const API_BASE_URL = isProduction
@@ -21,7 +22,7 @@ export async function request<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<T | AnyDomainError> {
-  const requestId = perfState.currentRequestId || Math.random().toString(36).substring(2, 15);
+  const requestId = perfState.currentRequestId || generateId();
 
   if (perfState.currentRequestId && !perfState.firstRequestStarted) {
     perfState.firstRequestStarted = true;
@@ -91,7 +92,7 @@ export async function request<T>(
         const backend = backendDuration;
         const returnDur = Math.max(0.1, totalNetworkRoundtrip - outbound - backend);
 
-        await logPerformanceEvent({
+        logPerformanceEvent({
           requestId,
           category: 'Performance',
           stage: 'Network Outbound',
@@ -99,7 +100,7 @@ export async function request<T>(
           durationMs: outbound,
         });
 
-        await logPerformanceEvent({
+        logPerformanceEvent({
           requestId,
           category: 'Performance',
           stage: 'Backend',
@@ -107,7 +108,7 @@ export async function request<T>(
           durationMs: backend,
         });
 
-        await logPerformanceEvent({
+        logPerformanceEvent({
           requestId,
           category: 'Performance',
           stage: 'Network Return',
@@ -115,7 +116,7 @@ export async function request<T>(
           durationMs: returnDur,
         });
       } else {
-        await logPerformanceEvent({
+        logPerformanceEvent({
           requestId,
           category: 'Performance',
           stage: 'Network',

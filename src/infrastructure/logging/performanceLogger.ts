@@ -1,5 +1,11 @@
 import { useEffect, useRef } from 'react';
+import { generateId } from '@lib/id';
 
+
+const isProduction = typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+const LOGS_URL = isProduction
+  ? 'https://workledger-backend.dubeutkarsh7.workers.dev/logs'
+  : 'http://localhost:3001/logs';
 
 export const perfState = {
   currentRequestId: null as string | null,
@@ -34,7 +40,7 @@ export async function logPerformanceEvent(event: {
   };
 
   try {
-    const response = await fetch('http://localhost:3001/logs', {
+    const response = await fetch(LOGS_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -58,7 +64,7 @@ export function usePerformanceTracker(pageName: string, isLoading: boolean) {
   // If on mount, we initialize
   if (isInitialMount.current) {
     isInitialMount.current = false;
-    const newId = Math.random().toString(36).substring(2, 15);
+    const newId = generateId();
     reqId.current = newId;
     perfState.currentRequestId = newId;
     perfState.currentPageName = pageName;

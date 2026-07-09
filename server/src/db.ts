@@ -2,40 +2,40 @@ import pg from 'pg';
 import dotenv from 'dotenv';
 import { randomUUID } from 'crypto';
 import { requestContextStorage } from './middleware/context.js';
+import { getEnv } from './env.js';
 
 dotenv.config();
 
 const { Pool } = pg;
 
 let activePool: pg.Pool | null = null;
-let env: any = process.env;
-
-try {
-  const cfModule = 'cloudflare:workers';
-  const cf = await import(cfModule);
-  if (cf && cf.env) {
-    env = { ...process.env, ...cf.env };
-  }
-} catch (e) {
-  // Ignored in local Node.js environment
-}
 
 export function getPool(): pg.Pool {
   if (activePool) return activePool;
 
-  let connectionString = env.DATABASE_URL;
+  const dbUrl = getEnv('DATABASE_URL');
+  const hyperdrive = getEnv('HYPERDRIVE');
 
-  if (env.HYPERDRIVE && env.HYPERDRIVE.connectionString) {
-    connectionString = env.HYPERDRIVE.connectionString;
+  console.log('[Database] DB_URL found:', !!dbUrl);
+  console.log('[Database] Hyperdrive object found:', !!hyperdrive);
+  if (hyperdrive) {
+    console.log('[Database] Hyperdrive connectionString found:', !!hyperdrive.connectionString);
+  }
+
+  let connectionString = dbUrl;
+
+  if (hyperdrive && hyperdrive.connectionString) {
+    connectionString = hyperdrive.connectionString;
     console.log('[Database] Using Cloudflare Hyperdrive connection pool');
   } else {
     console.log('[Database] Using standard connection pool');
   }
 
+  const isCloudflareEnv = typeof (globalThis as any).WebSocketPair !== 'undefined' || !!(globalThis as any).MIN_ENV;
   activePool = new Pool({
     connectionString,
-    max: 20,
-    idleTimeoutMillis: 30000,
+    max: isCloudflareEnv ? 2 : 20,
+    idleTimeoutMillis: isCloudflareEnv ? 1000 : 30000,
     connectionTimeoutMillis: 5000,
   });
 
@@ -64,7 +64,7 @@ export async function query<T extends pg.QueryResultRow = any>(
   text: string,
   params?: any[]
 ): Promise<pg.QueryResult<T>> {
-  if (process.env.PERFORMANCE_LOGGING !== 'true') {
+  if (getEnv('PERFORMANCE_LOGGING') !== 'true') {
     return pool.query<T>(text, params);
   }
 
@@ -158,7 +158,7 @@ export async function query<T extends pg.QueryResultRow = any>(
 export async function transaction<T>(
   callback: (client: pg.PoolClient) => Promise<T>
 ): Promise<T> {
-  if (process.env.PERFORMANCE_LOGGING !== 'true') {
+  if (getEnv('PERFORMANCE_LOGGING') !== 'true') {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');

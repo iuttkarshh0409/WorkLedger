@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto';
 import { requestContextStorage } from '../middleware/context.js';
+import { getEnv } from '../env.js';
 
 import { WorkspaceCommandRepository, WorkspaceQueryRepository } from '../repositories/WorkspaceRepository.js';
 import { ContributorCommandRepository, ContributorQueryRepository } from '../repositories/ContributorRepository.js';
@@ -19,7 +20,7 @@ import { ReviewService } from './ReviewService.js';
 
 function instrument<T extends object>(instance: T, className: string, stage: string): T {
   // If performance logging is disabled, return original immediately for near-zero overhead
-  if (process.env.PERFORMANCE_LOGGING !== 'true') {
+  if (getEnv('PERFORMANCE_LOGGING') !== 'true') {
     return instance;
   }
 

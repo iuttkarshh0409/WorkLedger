@@ -17,7 +17,28 @@ dotenv.config();
 const app = express();
 
 // Global Middleware
-app.use(cors());
+const allowedOrigins = [
+  'https://work-ledger.dubeutkarsh7.workers.dev',
+];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+    const isLocalhost = origin.startsWith('http://localhost:') || origin === 'http://localhost' || origin.startsWith('http://127.0.0.1:');
+    if (allowedOrigins.includes(origin) || isLocalhost) {
+      callback(null, true);
+    } else {
+      callback(null, false);
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID', 'X-Session-ID', 'X-Client-Timestamp'],
+  exposedHeaders: ['X-Request-ID', 'X-Session-ID', 'X-Server-Timestamp', 'X-Backend-Duration'],
+  credentials: true,
+}));
 app.use(express.json());
 app.use(requestIdMiddleware);
 app.use(authMiddleware);

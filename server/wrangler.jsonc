@@ -6,6 +6,9 @@
   "observability": {
     "enabled": true
   },
+  "vars": {
+    "PERFORMANCE_LOGGING": "true"
+  },
   "compatibility_flags": [
     "nodejs_compat",
     "enable_nodejs_http_modules",

@@ -6,6 +6,7 @@ import { ContributorRole, WorkspaceStatus } from '@domain';
 import type { AnyDomainError } from '@domain';
 import { clsx } from 'clsx';
 import { usePerformanceTracker } from '@infrastructure/logging';
+import { API_BASE_URL } from '@infrastructure/repositories/postgres/baseClient';
 
 
 function formatDomainError(error: AnyDomainError): string {
@@ -94,7 +95,8 @@ export function SettingsPage() {
     loadData();
 
     // Check observability health
-    fetch('http://localhost:3001/health')
+    const healthUrl = API_BASE_URL.replace('/api/v1', '/health');
+    fetch(healthUrl)
       .then((res) => {
         setObsEnabled(res.ok);
       })

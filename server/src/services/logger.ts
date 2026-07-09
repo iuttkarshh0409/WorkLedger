@@ -2,6 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { AuditLog } from '../types/index.js';
+import { getEnv } from '../env.js';
 
 const isCloudflare = typeof (globalThis as any).WebSocketPair !== 'undefined' || !!(globalThis as any).MIN_ENV;
 
@@ -96,7 +97,7 @@ export async function readPerfLogs(): Promise<any[]> {
 }
 
 export async function writePerfLog(log: any): Promise<void> {
-  if (process.env.PERFORMANCE_LOGGING !== 'true') {
+  if (getEnv('PERFORMANCE_LOGGING') !== 'true') {
     return;
   }
 
@@ -130,7 +131,7 @@ export async function writePerfLog(log: any): Promise<void> {
 }
 
 export async function writePerfLogsBatch(batch: any[]): Promise<void> {
-  if (process.env.PERFORMANCE_LOGGING !== 'true' || batch.length === 0) {
+  if (getEnv('PERFORMANCE_LOGGING') !== 'true' || batch.length === 0) {
     return;
   }
 
