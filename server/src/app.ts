@@ -2,8 +2,6 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { getEnv } from './env.js';
-import logRouter from './routes/logs.js';
-import performanceRouter from './routes/performance.js';
 import workspaceRouter from './routes/workspaces.js';
 import contributorRouter from './routes/contributors.js';
 import milestoneRouter from './routes/milestones.js';
@@ -61,12 +59,6 @@ app.use(authMiddleware);
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
-
-// Logs Router
-app.use('/logs', logRouter);
-
-// Performance Router
-app.use('/performance', performanceRouter);
 
 // API v1 Routes
 app.use('/api/v1/workspaces', workspaceRouter);

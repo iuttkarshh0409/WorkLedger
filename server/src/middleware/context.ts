@@ -1,19 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import { randomUUID } from 'crypto';
-import { AsyncLocalStorage } from 'async_hooks';
-import { writePerfLogsBatch } from '../services/logger.js';
-import { getEnv } from '../env.js';
 
 export interface RequestContext {
   requestId: string;
-  sessionId: string;
-  spanStack: string[];
-  bufferedEvents: any[];
-  currentOperation?: string;
-  serviceFinishedAt?: number;
 }
-
-export const requestContextStorage = new AsyncLocalStorage<RequestContext>();
 
 /**
  * Middleware to generate and attach a unique request ID.
@@ -23,104 +13,9 @@ export function requestIdMiddleware(req: Request, res: Response, next: NextFunct
   const rawRequestId = req.header('X-Request-ID');
   const requestId = (rawRequestId && isUuid(rawRequestId)) ? rawRequestId : randomUUID();
 
-  // If performance logging is disabled, don't execute any profiling or proxy logic
-  if (getEnv('PERFORMANCE_LOGGING') !== 'true') {
-    req.requestId = requestId;
-    res.setHeader('X-Request-ID', requestId);
-    next();
-    return;
-  }
-
   req.requestId = requestId;
   res.setHeader('X-Request-ID', requestId);
-
-  const sessionId = req.header('X-Session-ID') || req.header('x-session-id') || randomUUID();
-
-  // For Outbound/Inbound Network measurements:
-  const serverStartTime = Date.now();
-  const start = performance.now();
-
-  const context: RequestContext = {
-    requestId,
-    sessionId,
-    spanStack: [requestId], // request ID is the root span ID
-    bufferedEvents: [],
-  };
-
-  // Intercept writeHead to inject Server-Timestamp and Backend-Duration headers
-  const originalWriteHead = res.writeHead;
-  res.writeHead = function (statusCode: number, ...args: any[]) {
-    const backendDuration = performance.now() - start;
-    res.setHeader('X-Server-Timestamp', serverStartTime.toString());
-    res.setHeader('X-Backend-Duration', backendDuration.toString());
-    return originalWriteHead.apply(res, [statusCode, ...args] as any);
-  };
-
-  requestContextStorage.run(context, () => {
-    res.on('finish', () => {
-      const durationMs = performance.now() - start;
-
-      // Avoid infinite loop of performance logging when logging endpoint itself is called
-      if (req.originalUrl.includes('/logs') || req.originalUrl.includes('/performance')) {
-        return;
-      }
-
-      // Add Express log
-      const expressEvent = {
-        id: randomUUID(),
-        requestId,
-        sessionId,
-        spanId: requestId,
-        parentId: null,
-        timestamp: new Date().toISOString(),
-        category: 'Performance',
-        stage: 'Express',
-        operation: `${req.method} ${req.originalUrl.split('?')[0]}`,
-        durationMs,
-        metadata: { status: res.statusCode },
-      };
-      context.bufferedEvents.push(expressEvent);
-
-      // Now calculate and log Response Serialization if a service execution has finished
-      if (context.serviceFinishedAt) {
-        const serializationDuration = performance.now() - context.serviceFinishedAt;
-        context.bufferedEvents.push({
-          id: randomUUID(),
-          requestId,
-          sessionId,
-          spanId: randomUUID(),
-          parentId: requestId,
-          timestamp: new Date().toISOString(),
-          category: 'Performance',
-          stage: 'Response Serialization',
-          operation: 'Response Serialization',
-          durationMs: serializationDuration,
-          metadata: {},
-        });
-      }
-
-      // Sample High-Volume Events: Log every request >300 ms, and 10% of requests below 300 ms.
-      const isSlow = durationMs > 300;
-      const isSampled = isSlow || Math.random() < 0.1;
-
-      if (isSampled) {
-        const isCloudflare = typeof (globalThis as any).WebSocketPair !== 'undefined' || !!(globalThis as any).MIN_ENV;
-        if (isCloudflare) {
-          // Log synchronously to console in Cloudflare Worker environment to prevent hanging/microtask leaks
-          for (const logEvent of context.bufferedEvents) {
-            console.log('[Performance Log]', JSON.stringify(logEvent));
-          }
-        } else {
-          // Log asynchronously in Node environment to avoid blocking event loop
-          writePerfLogsBatch(context.bufferedEvents).catch((err) => {
-            console.error('[Error] Failed to write performance log batch:', err);
-          });
-        }
-      }
-    });
-
-    next();
-  });
+  next();
 }
 
 /**

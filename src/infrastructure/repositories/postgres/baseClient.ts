@@ -1,6 +1,5 @@
 import { AnyDomainError } from '@domain';
 import { validationError, notFound, conflict, permissionDenied, domainError } from '@lib/errors';
-import { perfState, logPerformanceEvent } from '@infrastructure/logging';
 import { generateId } from '@lib/id';
 
 const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
@@ -22,19 +21,7 @@ export async function request<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<T | AnyDomainError> {
-  const requestId = perfState.currentRequestId || generateId();
-
-  if (perfState.currentRequestId && !perfState.firstRequestStarted) {
-    perfState.firstRequestStarted = true;
-    const frontendDuration = performance.now() - perfState.mountTime;
-    logPerformanceEvent({
-      requestId,
-      category: 'Performance',
-      stage: 'Frontend',
-      operation: `${perfState.currentPageName} Load`,
-      durationMs: frontendDuration,
-    });
-  }
+  const requestId = generateId();
 
   try {
     const url = `${API_BASE_URL}${path}`;
@@ -60,73 +47,10 @@ export async function request<T>(
       }
     }
 
-    const clientStartTime = Date.now();
-    const tFetchStart = performance.now();
-    
-    // Inject client-side request timestamp
-    headers['X-Client-Timestamp'] = clientStartTime.toString();
-
-    let response;
-    try {
-      response = await fetch(url, {
-        ...options,
-        headers,
-      });
-    } finally {
-      const tFetchEnd = performance.now();
-      const totalNetworkRoundtrip = tFetchEnd - tFetchStart;
-
-      let serverStartTime = 0;
-      let backendDuration = 0;
-      if (response) {
-        const sTime = response.headers.get('X-Server-Timestamp');
-        const bDuration = response.headers.get('X-Backend-Duration');
-        if (sTime) serverStartTime = parseFloat(sTime);
-        if (bDuration) backendDuration = parseFloat(bDuration);
-      }
-
-      const operation = `${options.method || 'GET'} ${path.split('?')[0]}`;
-
-      if (serverStartTime && backendDuration) {
-        const outbound = Math.max(0.1, serverStartTime - clientStartTime);
-        const backend = backendDuration;
-        const returnDur = Math.max(0.1, totalNetworkRoundtrip - outbound - backend);
-
-        logPerformanceEvent({
-          requestId,
-          category: 'Performance',
-          stage: 'Network Outbound',
-          operation: `${operation} (Outbound)`,
-          durationMs: outbound,
-        });
-
-        logPerformanceEvent({
-          requestId,
-          category: 'Performance',
-          stage: 'Backend',
-          operation: `${operation} (Backend)`,
-          durationMs: backend,
-        });
-
-        logPerformanceEvent({
-          requestId,
-          category: 'Performance',
-          stage: 'Network Return',
-          operation: `${operation} (Return)`,
-          durationMs: returnDur,
-        });
-      } else {
-        logPerformanceEvent({
-          requestId,
-          category: 'Performance',
-          stage: 'Network',
-          operation,
-          durationMs: totalNetworkRoundtrip,
-        });
-      }
-
-      perfState.lastRequestResolvedTime = tFetchEnd;
-    }
+    const response = await fetch(url, {
+      ...options,
+      headers,
+    });
 
     const body: ApiResponse<T> = await response.json().catch(() => ({
       success: false,
