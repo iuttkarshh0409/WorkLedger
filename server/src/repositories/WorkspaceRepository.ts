@@ -64,8 +64,10 @@ export class WorkspaceCommandRepository {
     params.push(id);
     const idIdx = paramIdx++;
 
+    const ignoredFields = ['id', 'createdAt', 'created_at', 'updatedAt', 'updated_at', 'version'];
     for (const [key, value] of Object.entries(fields)) {
       if (value === undefined) continue;
+      if (ignoredFields.includes(key)) continue;
       const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
       updates.push(`${snakeKey} = $${paramIdx++}`);
       params.push(value);
