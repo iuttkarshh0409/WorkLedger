@@ -4,11 +4,13 @@ import { fileURLToPath, URL } from 'node:url';
 
 import { readFileSync } from 'node:fs';
 
+import { cloudflare } from "@cloudflare/vite-plugin";
+
 const packageJson = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8'));
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), cloudflare()],
   define: {
     'import.meta.env.PACKAGE_VERSION': JSON.stringify(packageJson.version),
   },
