@@ -5,7 +5,7 @@ import { generateId } from '@lib/id';
 
 const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
 export const API_BASE_URL = import.meta.env.VITE_API_URL || (isProduction
-  ? 'https://workledger-backend.dubeutkarsh7.workers.dev/api/v1'
+  ? '/api/v1'
   : 'http://localhost:3001/api/v1');
 
 export interface ApiResponse<T> {

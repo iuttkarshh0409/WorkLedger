@@ -6,7 +6,7 @@ const isProduction = typeof window !== 'undefined' && window.location.hostname !
 const LOGS_URL = import.meta.env.VITE_API_URL
   ? import.meta.env.VITE_API_URL.replace('/api/v1', '/logs')
   : (isProduction
-      ? 'https://workledger-backend.dubeutkarsh7.workers.dev/logs'
+      ? '/logs'
       : 'http://localhost:3001/logs');
 
 export const perfState = {

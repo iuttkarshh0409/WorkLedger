@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { getEnv } from './env.js';
 import logRouter from './routes/logs.js';
 import performanceRouter from './routes/performance.js';
 import workspaceRouter from './routes/workspaces.js';
@@ -17,8 +18,9 @@ dotenv.config();
 const app = express();
 
 // Global Middleware
+const frontendUrl = getEnv('FRONTEND_URL') || 'https://work-ledger-eight.vercel.app';
 const allowedOrigins = [
-  'https://work-ledger.dubeutkarsh7.workers.dev',
+  frontendUrl,
 ];
 
 app.use(cors({
