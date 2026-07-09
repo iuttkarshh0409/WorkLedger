@@ -35,9 +35,21 @@ app.use(cors({
     }
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID', 'X-Session-ID', 'X-Client-Timestamp'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-Request-ID',
+    'X-Session-ID',
+    'X-Client-Timestamp',
+    'x-user-id',
+    'x-user-role',
+    'x-user-email',
+    'x-user-name',
+    'x-workspace-id'
+  ],
   exposedHeaders: ['X-Request-ID', 'X-Session-ID', 'X-Server-Timestamp', 'X-Backend-Duration'],
   credentials: true,
+  optionsSuccessStatus: 200,
 }));
 app.use(express.json());
 app.use(requestIdMiddleware);
