@@ -20,4 +20,6 @@ export interface Workspace {
   description: string;
   ownerId: EntityId;
   status: WorkspaceStatus;
+  ownerName?: string;
+  ownerEmail?: string;
 }

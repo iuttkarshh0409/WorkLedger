@@ -18,6 +18,8 @@ export interface CreateWorkspaceInput {
   description: string;
   ownerId: EntityId;
   status?: WorkspaceStatus;
+  ownerName?: string;
+  ownerEmail?: string;
 }
 
 /**

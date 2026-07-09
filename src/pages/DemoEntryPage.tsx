@@ -5,7 +5,7 @@ import { useServices } from '@hooks/useServices';
 import { useSession } from '@app/SessionContext';
 import { ContributorRole, Workspace, WorkspaceStatus } from '@domain';
 import { isDomainError } from '@lib/errors';
-import { DEMO_OWNER_ID, overrideNextId } from '@lib';
+import { DEMO_OWNER_ID } from '@lib';
 import { logEvent } from '@infrastructure/logging';
 
 export function DemoEntryPage() {
@@ -90,6 +90,8 @@ export function DemoEntryPage() {
           description: `Workspace for ${workspaceName.trim()}`,
           ownerId: DEMO_OWNER_ID,
           status: WorkspaceStatus.Active,
+          ownerName: name.trim(),
+          ownerEmail: email.trim(),
         });
 
         if (isDomainError(workspaceResult)) {
@@ -136,24 +138,6 @@ export function DemoEntryPage() {
           },
         });
 
-        // 2. Create Owner Contributor
-        overrideNextId(DEMO_OWNER_ID);
-        const contributorResult = await contributorService.addContributor(
-          {
-            workspaceId: workspaceResult.id,
-            name: name.trim(),
-            email: email.trim(),
-            role: ContributorRole.Owner,
-          },
-          DEMO_OWNER_ID
-        );
-
-        if (isDomainError(contributorResult)) {
-          setError(contributorResult.kind === 'ConflictError' ? contributorResult.message : 'Failed to create owner contributor.');
-          setSubmitting(false);
-          return;
-        }
-
         // Log ContributorAdded
         await logEvent({
           message: `${name.trim()} joined workspace '${workspaceResult.name}' as Workspace Owner.`,
@@ -172,23 +156,23 @@ export function DemoEntryPage() {
           },
           entity: {
             entityType: 'Contributor',
-            entityId: contributorResult.id,
-            entityName: contributorResult.name,
+            entityId: DEMO_OWNER_ID,
+            entityName: name.trim(),
           },
           state: {
             after: {
-              id: contributorResult.id,
-              workspaceId: contributorResult.workspaceId,
-              name: contributorResult.name,
-              email: contributorResult.email,
-              role: contributorResult.role,
-              status: contributorResult.status,
+              id: DEMO_OWNER_ID,
+              workspaceId: workspaceResult.id,
+              name: name.trim(),
+              email: email.trim(),
+              role: ContributorRole.Owner,
+              status: 'Active',
             },
           },
           details: {
             metadata: {
-              email: contributorResult.email,
-              role: contributorResult.role,
+              email: email.trim(),
+              role: ContributorRole.Owner,
               invitedBy: 'System Bootstrap',
             },
           },
@@ -196,11 +180,11 @@ export function DemoEntryPage() {
 
         // 3. Persist Session
         login({
-          contributorId: contributorResult.id,
+          contributorId: DEMO_OWNER_ID,
           workspaceId: workspaceResult.id,
           role: ContributorRole.Owner,
-          name: contributorResult.name,
-          email: contributorResult.email,
+          name: name.trim(),
+          email: email.trim(),
         });
 
       } else {

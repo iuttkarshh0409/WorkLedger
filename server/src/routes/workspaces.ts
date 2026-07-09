@@ -34,6 +34,8 @@ router.post('/', async (req, res, next) => {
         name: req.body.name,
         description: req.body.description,
         ownerId: req.body.ownerId || req.user?.id || '',
+        ownerName: req.body.ownerName || req.user?.name || '',
+        ownerEmail: req.body.ownerEmail || req.user?.email || '',
       },
       req.requestId
     );

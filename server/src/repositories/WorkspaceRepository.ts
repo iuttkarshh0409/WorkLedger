@@ -4,6 +4,9 @@ import { ttlCache } from '../services/cache.js';
 
 export class WorkspaceCommandRepository {
   async create(ws: Workspace): Promise<void> {
+    if (!ws.ownerName || !ws.ownerEmail) {
+      throw { status: 400, code: 'VALIDATION_ERROR', message: 'ownerName and ownerEmail are required to create a workspace.' };
+    }
     await query(
       `WITH inserted_workspace AS (
          INSERT INTO workspaces (id, created_at, updated_at, name, description, owner_id, status, version)
@@ -22,8 +25,8 @@ export class WorkspaceCommandRepository {
         ws.ownerId,
         ws.status,
         ws.version,
-        'Pending Owner',
-        `owner-${ws.ownerId}@placeholder.local`,
+        ws.ownerName,
+        ws.ownerEmail,
         '',
         'Owner',
         'Active'

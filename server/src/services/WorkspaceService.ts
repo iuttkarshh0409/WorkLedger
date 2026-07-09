@@ -11,11 +11,11 @@ export class WorkspaceService {
   ) {}
 
   async createWorkspace(
-    input: { name: string; description: string; ownerId: string },
+    input: { name: string; description: string; ownerId: string; ownerName: string; ownerEmail: string },
     requestId: string
   ): Promise<Workspace> {
-    if (!input.name || !input.description || !input.ownerId) {
-      throw { status: 400, code: 'VALIDATION_ERROR', message: 'Name, description, and ownerId are required.' };
+    if (!input.name || !input.description || !input.ownerId || !input.ownerName || !input.ownerEmail) {
+      throw { status: 400, code: 'VALIDATION_ERROR', message: 'Name, description, ownerId, ownerName, and ownerEmail are required.' };
     }
 
     const now = new Date().toISOString();
@@ -30,6 +30,8 @@ export class WorkspaceService {
       ownerId: input.ownerId,
       status: WorkspaceStatus.Active,
       version: 1,
+      ownerName: input.ownerName,
+      ownerEmail: input.ownerEmail,
     };
 
     await this.workspaceCommand.create(workspace);
@@ -44,6 +46,18 @@ export class WorkspaceService {
       reviewId: null,
       submissionId: null,
       metadata: { workspaceName: workspace.name },
+    }, requestId);
+
+    await this.activityService.recordActivity({
+      workspaceId: workspace.id,
+      performedBy: workspace.ownerId,
+      type: 'Contributor Joined' as any,
+      timestamp: now,
+      assignmentId: null,
+      contributorId: workspace.ownerId,
+      reviewId: null,
+      submissionId: null,
+      metadata: { contributorName: workspace.ownerName, role: 'Owner' },
     }, requestId);
 
     return workspace;

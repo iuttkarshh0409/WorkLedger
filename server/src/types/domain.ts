@@ -80,6 +80,8 @@ export interface Workspace {
   ownerId: EntityId;
   status: WorkspaceStatus;
   version: number;
+  ownerName?: string;
+  ownerEmail?: string;
 }
 
 export interface Contributor {

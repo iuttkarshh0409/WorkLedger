@@ -61,6 +61,8 @@ export class WorkspaceService implements IWorkspaceService {
       description: input.description,
       ownerId:     input.ownerId,
       status:      input.status ?? WorkspaceStatus.Active,
+      ownerName:   input.ownerName,
+      ownerEmail:  input.ownerEmail,
     };
 
     const entityValidation = validateWorkspace(workspace);
