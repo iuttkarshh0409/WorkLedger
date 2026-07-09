@@ -158,4 +158,11 @@ export class AssignmentRepository implements IAssignmentRepository {
     }
     return result.value;
   }
+
+  async delete(id: EntityId): Res<void> {
+    const result = await this.storage.remove(this.namespace, id);
+    if (!result.ok) {
+      return translateStorageError(result.error, 'AssignmentRepository.delete');
+    }
+  }
 }

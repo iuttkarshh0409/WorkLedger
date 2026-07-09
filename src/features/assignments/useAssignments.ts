@@ -25,6 +25,7 @@ import type {
   Assignment,
   Contributor,
   CreateAssignmentInput,
+  UpdateAssignmentInput,
   AssignmentStatus,
   AssignmentPriority,
   AnyDomainError,
@@ -75,6 +76,8 @@ interface UseAssignmentsActions {
   acceptAssignment:  (id: EntityId) => Promise<boolean>;
   startAssignment:   (id: EntityId) => Promise<boolean>;
   archiveAssignment: (id: EntityId) => Promise<boolean>;
+  editAssignment:    (id: EntityId, input: Omit<UpdateAssignmentInput, 'updatedAt'>) => Promise<boolean>;
+  deleteAssignment:  (id: EntityId) => Promise<boolean>;
   /**
    * updateAssignment
    *
@@ -508,6 +511,127 @@ export function useAssignments(
     return true;
   }, [assignmentService, session, updateInList]);
 
+  const editAssignment = useCallback(
+    async (id: EntityId, input: Omit<UpdateAssignmentInput, 'updatedAt'>): Promise<boolean> => {
+      setState((s) => ({ ...s, submitting: true, submitError: null }));
+      const actId = session ? session.contributorId : DEMO_OWNER_ID;
+      const result = await assignmentService.updateAssignment(
+        id,
+        {
+          ...input,
+          updatedAt: new Date().toISOString(),
+        },
+        actId
+      );
+
+      if (isDomainError(result)) {
+        setState((s) => ({ ...s, submitting: false, submitError: formatError(result) }));
+        return false;
+      }
+
+      updateInList(result);
+
+      // Log AssignmentUpdated
+      (async () => {
+        try {
+          const workspace = await workspaceService.getWorkspaceById(state.workspaceId!);
+          const wsName = (workspace && !isDomainError(workspace)) ? workspace.name : 'Unknown Workspace';
+          
+          const actName = session ? session.name : 'Owner';
+          const actRole = session ? session.role : 'Owner';
+
+          await logEvent({
+            message: `${actName} updated assignment '${result.title}'.`,
+            workspace: {
+              workspaceId: state.workspaceId!,
+              workspaceName: wsName,
+            },
+            actor: {
+              contributorId: actId,
+              contributorName: actName,
+              contributorRole: actRole,
+            },
+            event: {
+              eventCode: 'AssignmentUpdated' as any,
+              eventLabel: 'Assignment Updated',
+            },
+            entity: {
+              entityType: 'Assignment',
+              entityId: result.id,
+              entityName: result.title,
+            },
+          });
+        } catch (e) {
+          console.warn('Logging error:', e);
+        }
+      })();
+
+      return true;
+    },
+    [assignmentService, workspaceService, state.workspaceId, session, updateInList],
+  );
+
+  const deleteAssignment = useCallback(async (id: EntityId): Promise<boolean> => {
+    const actId = session ? session.contributorId : DEMO_OWNER_ID;
+    
+    const assignment = state.assignments.find((a) => a.id === id);
+    const assignmentTitle = assignment ? assignment.title : 'Unknown';
+
+    const result = await assignmentService.deleteAssignment(id, actId);
+    if (isDomainError(result)) {
+      setState((s) => ({ ...s, submitError: formatError(result) }));
+      return false;
+    }
+
+    setState((s) => ({
+      ...s,
+      assignments: s.assignments.filter((a) => a.id !== id),
+    }));
+
+    // Log AssignmentDeleted
+    (async () => {
+      try {
+        const workspace = await workspaceService.getWorkspaceById(state.workspaceId!);
+        const wsName = (workspace && !isDomainError(workspace)) ? workspace.name : 'Unknown Workspace';
+        const actName = session ? session.name : 'Owner';
+        const actRole = session ? session.role : 'Owner';
+
+        await logEvent({
+          message: `${actName} permanently deleted assignment '${assignmentTitle}'.`,
+          workspace: {
+            workspaceId: state.workspaceId!,
+            workspaceName: wsName,
+          },
+          actor: {
+            contributorId: actId,
+            contributorName: actName,
+            contributorRole: actRole,
+          },
+          event: {
+            eventCode: 'AssignmentDeleted' as any,
+            eventLabel: 'Assignment Deleted',
+          },
+          entity: {
+            entityType: 'Assignment',
+            entityId: id,
+            entityName: assignmentTitle,
+          },
+          state: {
+            before: assignment ? {
+              title: assignment.title,
+              priority: assignment.priority,
+              status: assignment.status,
+            } : {},
+          },
+        });
+      } catch (e) {
+        console.warn('Logging error:', e);
+      }
+    })();
+
+    return true;
+  }, [assignmentService, workspaceService, state.workspaceId, state.assignments, session]);
+
   // ── External update (e.g. after submission status transition) ────────────
 
   const updateAssignment = useCallback((updated: Assignment) => {
@@ -532,6 +656,8 @@ export function useAssignments(
     acceptAssignment,
     startAssignment,
     archiveAssignment,
+    editAssignment,
+    deleteAssignment,
     updateAssignment,
     setFilters,
     clearSubmitError,

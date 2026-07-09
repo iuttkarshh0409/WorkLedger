@@ -33,6 +33,7 @@ import { AssignmentEmptyState }  from '@features/assignments/AssignmentEmptyStat
 import { AssignmentFilters }     from '@features/assignments/AssignmentFilters';
 import { AssignmentFormDialog }  from '@features/assignments/AssignmentFormDialog';
 import type { AssignmentFormValues } from '@features/assignments/AssignmentFormDialog';
+import { DeleteAssignmentDialog } from '@features/assignments/DeleteAssignmentDialog';
 import type { Assignment, AssignmentStatus, Milestone, EntityId } from '@domain';
 import { isDomainError } from '@lib/errors';
 import { getOrCreateDemoWorkspace } from '@lib/bootstrap';
@@ -65,6 +66,8 @@ export function AssignmentsPage() {
     acceptAssignment,
     startAssignment,
     archiveAssignment,
+    editAssignment,
+    deleteAssignment,
     updateAssignment,
     setFilters,
     clearSubmitError,
@@ -87,8 +90,36 @@ export function AssignmentsPage() {
 
   // ── Create dialog ──────────────────────────────────────────────────────────
   const [createOpen, setCreateOpen] = useState(false);
+  const [formMode, setFormMode] = useState<'create' | 'edit' | 'duplicate'>('create');
+  const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
 
-  const handleOpenCreate = () => { clearSubmitError(); setCreateOpen(true); };
+  // ── Delete confirmation state ──────────────────────────────────────────────
+  const [deleteTarget, setDeleteTarget] = useState<Assignment | null>(null);
+
+  const handleOpenCreate = () => {
+    setFormMode('create');
+    setSelectedAssignment(null);
+    clearSubmitError();
+    setCreateOpen(true);
+  };
+
+  const handleOpenEdit = (assignment: Assignment) => {
+    setFormMode('edit');
+    setSelectedAssignment(assignment);
+    clearSubmitError();
+    setCreateOpen(true);
+  };
+
+  const handleOpenDuplicate = (assignment: Assignment) => {
+    setFormMode('duplicate');
+    setSelectedAssignment(assignment);
+    clearSubmitError();
+    setCreateOpen(true);
+  };
+
+  const handleOpenDelete = (assignment: Assignment) => {
+    setDeleteTarget(assignment);
+  };
 
   // Keyboard shortcut — must be declared after handleOpenCreate
   useRegisterShortcuts({ onNewAssignment: handleOpenCreate });
@@ -97,18 +128,38 @@ export function AssignmentsPage() {
     if (submitting) return;
     clearSubmitError();
     setCreateOpen(false);
+    setSelectedAssignment(null);
   };
   const handleCreateSubmit = async (values: AssignmentFormValues) => {
-    const success = await createAssignment({
-      title:         values.title.trim(),
-      description:   values.description.trim(),
-      contributorId: values.contributorId,
-      reviewerId:    values.reviewerId || null,
-      milestoneId:   values.milestoneId || null,
-      priority:      values.priority,
-      deadline:      new Date(values.deadline).toISOString(),
-    });
-    if (success) setCreateOpen(false);
+    if (formMode === 'edit' && selectedAssignment) {
+      const success = await editAssignment(selectedAssignment.id, {
+        title:         values.title.trim(),
+        description:   values.description.trim(),
+        contributorId: values.contributorId,
+        reviewerId:    values.reviewerId || null,
+        milestoneId:   values.milestoneId || null,
+        priority:      values.priority,
+        deadline:      new Date(values.deadline).toISOString(),
+      });
+      if (success) {
+        setCreateOpen(false);
+        setSelectedAssignment(null);
+      }
+    } else {
+      const success = await createAssignment({
+        title:         values.title.trim(),
+        description:   values.description.trim(),
+        contributorId: values.contributorId,
+        reviewerId:    values.reviewerId || null,
+        milestoneId:   values.milestoneId || null,
+        priority:      values.priority,
+        deadline:      new Date(values.deadline).toISOString(),
+      });
+      if (success) {
+        setCreateOpen(false);
+        setSelectedAssignment(null);
+      }
+    }
   };
 
   // ── Detail panel selection ─────────────────────────────────────────────────
@@ -236,6 +287,9 @@ export function AssignmentsPage() {
                         onStart={(id)  => { startAssignment(id); }}
                         onArchive={(id) => { archiveAssignment(id); }}
                         onSubmit={(id)  => { setExpandedId(id); }}
+                        onEdit={handleOpenEdit}
+                        onDuplicate={handleOpenDuplicate}
+                        onDelete={handleOpenDelete}
                       />
                     }
                   >
@@ -259,7 +313,16 @@ export function AssignmentsPage() {
       {/* Create assignment dialog */}
       <AssignmentFormDialog
         open={createOpen}
-        submitLabel="Create assignment"
+        submitLabel={formMode === 'edit' ? 'Save Changes' : formMode === 'duplicate' ? 'Duplicate Assignment' : 'Create assignment'}
+        initialValues={selectedAssignment ? {
+          title: formMode === 'duplicate' ? `${selectedAssignment.title} (Copy)` : selectedAssignment.title,
+          description: selectedAssignment.description,
+          contributorId: selectedAssignment.contributorId,
+          reviewerId: selectedAssignment.reviewerId || '',
+          milestoneId: selectedAssignment.milestoneId || '',
+          priority: selectedAssignment.priority,
+          deadline: selectedAssignment.deadline ? selectedAssignment.deadline.split('T')[0] : '',
+        } : undefined}
         submitting={submitting}
         error={submitError}
         contributors={contributors}
@@ -267,6 +330,21 @@ export function AssignmentsPage() {
         onSubmit={handleCreateSubmit}
         onClose={handleCloseCreate}
       />
+
+      {/* Delete assignment confirmation dialog */}
+      {deleteTarget && (
+        <DeleteAssignmentDialog
+          open={!!deleteTarget}
+          assignmentTitle={deleteTarget.title}
+          onConfirm={async () => {
+            const success = await deleteAssignment(deleteTarget.id);
+            if (success) {
+              setDeleteTarget(null);
+            }
+          }}
+          onCancel={() => setDeleteTarget(null)}
+        />
+      )}
     </div>
   );
 }

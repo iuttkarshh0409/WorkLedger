@@ -388,4 +388,22 @@ export class AssignmentService implements IAssignmentService {
   ): Promise<Assignment[] | AnyDomainError> {
     return this.assignments.findByStatus(workspaceId, status);
   }
+
+  async deleteAssignment(
+    id: EntityId,
+    performedBy: EntityId,
+  ): Promise<void | AnyDomainError> {
+    const authError = await this.checkOwner(performedBy, 'AssignmentService.deleteAssignment');
+    if (authError) return authError;
+
+    const existing = await this.fetch(id);
+    if (isDomainError(existing)) return existing;
+
+    if (existing.status === Status.Completed) {
+      return conflict('Completed assignments cannot be deleted. Archive them instead.');
+    }
+
+    const deleteResult = await this.assignments.delete(id);
+    if (isDomainError(deleteResult)) return deleteResult;
+  }
 }

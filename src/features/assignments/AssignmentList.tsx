@@ -15,6 +15,9 @@ interface AssignmentListProps {
   onStart:      (id: string) => void;
   onArchive:    (id: string) => void;
   onSubmit:     (id: string) => void;
+  onEdit:       (assignment: Assignment) => void;
+  onDuplicate:  (assignment: Assignment) => void;
+  onDelete:     (assignment: Assignment) => void;
 }
 
 import { AssignmentCard } from './AssignmentCard';
@@ -26,6 +29,9 @@ export function AssignmentList({
   onStart,
   onArchive,
   onSubmit,
+  onEdit,
+  onDuplicate,
+  onDelete,
 }: AssignmentListProps) {
   if (assignments.length === 0) {
     return (
@@ -51,6 +57,9 @@ export function AssignmentList({
           onStart={onStart}
           onArchive={onArchive}
           onSubmit={onSubmit}
+          onEdit={onEdit}
+          onDuplicate={onDuplicate}
+          onDelete={onDelete}
         />
       ))}
     </div>

@@ -163,4 +163,25 @@ export class AssignmentService {
   async getAssignmentsByWorkspace(workspaceId: string, filters?: any, pagination?: any) {
     return this.assignmentQuery.findByWorkspace(workspaceId, filters, pagination);
   }
+
+  async deleteAssignment(id: string, performedBy: string, workspaceId: string, userRole: string): Promise<void> {
+    if (userRole !== 'Owner') {
+      throw { status: 403, code: 'FORBIDDEN', message: 'Insufficient permission.' };
+    }
+
+    const assignment = await this.assignmentQuery.findById(id);
+    if (!assignment) {
+      throw { status: 404, code: 'NOT_FOUND', message: 'Assignment not found.' };
+    }
+
+    if (assignment.workspaceId !== workspaceId) {
+      throw { status: 403, code: 'FORBIDDEN', message: 'Assignment does not belong to the current workspace.' };
+    }
+
+    if (assignment.status === AssignmentStatus.Completed) {
+      throw { status: 409, code: 'RESOURCE_CONFLICT', message: 'Completed assignments cannot be deleted. Archive them instead.' };
+    }
+
+    await this.assignmentCommand.delete(id);
+  }
 }

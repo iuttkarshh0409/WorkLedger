@@ -56,4 +56,7 @@ export interface IAssignmentRepository {
 
   /** Returns true if an Assignment with the given id exists. */
   exists(id: EntityId): Promise<boolean | AnyDomainError>;
+
+  /** Permanently deletes the Assignment. */
+  delete(id: EntityId): Promise<void | AnyDomainError>;
 }

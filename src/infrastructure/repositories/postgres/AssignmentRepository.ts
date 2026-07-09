@@ -74,4 +74,10 @@ export class AssignmentRepository implements IAssignmentRepository {
     if (!a || (a as any).kind) return false;
     return true;
   }
+
+  async delete(id: EntityId): Res<void> {
+    return request<void>(`/assignments/${id}`, {
+      method: 'DELETE',
+    });
+  }
 }

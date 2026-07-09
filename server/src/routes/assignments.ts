@@ -88,4 +88,22 @@ router.post('/:id/archive', async (req, res, next) => {
   }
 });
 
+router.delete('/:id', async (req, res, next) => {
+  try {
+    const performedBy = req.user?.id || 'system';
+    const workspaceId = req.workspace?.id || '';
+    const userRole = req.user?.role || '';
+
+    await assignmentService.deleteAssignment(
+      req.params.id,
+      performedBy,
+      workspaceId,
+      userRole
+    );
+    sendSuccess(res, { message: 'Assignment deleted successfully.' });
+  } catch (err) {
+    next(err);
+  }
+});
+
 export default router;

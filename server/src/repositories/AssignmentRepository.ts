@@ -1,4 +1,4 @@
-import { query } from '../db.js';
+import { query, transaction } from '../db.js';
 import { Assignment, AssignmentStatus, AssignmentPriority } from '../types/domain.js';
 
 export class AssignmentCommandRepository {
@@ -178,6 +178,22 @@ export class AssignmentCommandRepository {
       revisionCount: row.revision_count,
       version: row.version,
     };
+  }
+
+  async delete(id: string): Promise<void> {
+    await transaction(async (client) => {
+      await client.query('DELETE FROM reviews WHERE assignment_id = $1', [id]);
+      await client.query('DELETE FROM submissions WHERE assignment_id = $1', [id]);
+      await client.query('DELETE FROM activities WHERE assignment_id = $1', [id]);
+      const res = await client.query('DELETE FROM assignments WHERE id = $1', [id]);
+      if (res.rowCount === 0) {
+        throw {
+          status: 404,
+          code: 'NOT_FOUND',
+          message: 'Assignment not found.',
+        };
+      }
+    });
   }
 }
 

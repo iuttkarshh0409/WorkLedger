@@ -159,4 +159,14 @@ export interface IAssignmentService {
     workspaceId: EntityId,
     status: AssignmentStatus,
   ): Promise<Assignment[] | AnyDomainError>;
+
+  /**
+   * Permanently deletes the Assignment with the given id.
+   *
+   * @permission Owner only
+   */
+  deleteAssignment(
+    id: EntityId,
+    performedBy: EntityId,
+  ): Promise<void | AnyDomainError>;
 }

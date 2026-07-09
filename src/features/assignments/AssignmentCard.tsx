@@ -14,11 +14,10 @@
  * @see docs/06_ui_architecture.md (Assignment card fields)
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { clsx } from 'clsx';
 import type { Assignment, Contributor } from '@domain';
 import { AssignmentStatus, AssignmentPriority, Authorization } from '@domain';
-import { ConfirmDialog } from '@shared/components/ConfirmDialog';
 import { useSession } from '@app/SessionContext';
 
 // ─── Badge config helpers ─────────────────────────────────────────────────────
@@ -85,6 +84,9 @@ interface AssignmentCardProps {
   onStart:      (id: string) => void;
   onArchive:    (id: string) => void;
   onSubmit:     (id: string) => void;
+  onEdit:       (assignment: Assignment) => void;
+  onDuplicate:  (assignment: Assignment) => void;
+  onDelete:     (assignment: Assignment) => void;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -97,13 +99,23 @@ export function AssignmentCard({
   onStart,
   onArchive,
   onSubmit,
+  onEdit,
+  onDuplicate,
+  onDelete,
 }: AssignmentCardProps) {
   const { session } = useSession();
   const status   = statusConfig(assignment.status);
   const priority = priorityConfig(assignment.priority);
   const overdue  = isOverdue(assignment.deadline, assignment.status);
   const isArchived = assignment.status === AssignmentStatus.Archived;
-  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+
+  useEffect(() => {
+    if (!dropdownOpen) return;
+    const handleClose = () => setDropdownOpen(false);
+    window.addEventListener('click', handleClose);
+    return () => window.removeEventListener('click', handleClose);
+  }, [dropdownOpen]);
 
   const contributor = contributors.find((c) => c.id === assignment.contributorId);
   const reviewer    = contributors.find((c) => c.id === assignment.reviewerId);
@@ -115,15 +127,94 @@ export function AssignmentCard({
         <h3 className="text-sm font-semibold text-text-primary leading-snug flex-1 min-w-0">
           {assignment.title || '—'}
         </h3>
-        <span
-          className={clsx(
-            'shrink-0 inline-flex items-center rounded-md px-2 py-0.5',
-            'text-xs font-medium ring-1 ring-inset',
-            status.className,
+        <div className="flex items-center gap-2 shrink-0">
+          <span
+            className={clsx(
+              'inline-flex items-center rounded-md px-2 py-0.5',
+              'text-xs font-medium ring-1 ring-inset',
+              status.className,
+            )}
+          >
+            {status.label}
+          </span>
+          {session && Authorization.canEditAssignment(session.role) && (
+            <div className="relative dropdown-container">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setDropdownOpen(!dropdownOpen);
+                }}
+                className={clsx(
+                  'flex items-center justify-center w-6 h-6 rounded-md',
+                  'text-text-muted hover:text-text-primary hover:bg-surface-muted',
+                  'transition-colors duration-150',
+                )}
+                aria-label="Assignment actions"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width={16} height={16} viewBox="0 0 24 24"
+                  fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round"
+                  strokeLinejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="1.5" />
+                  <circle cx="12" cy="5" r="1.5" />
+                  <circle cx="12" cy="19" r="1.5" />
+                </svg>
+              </button>
+              {dropdownOpen && (
+                <div className="absolute right-0 mt-1 w-32 rounded-md border border-border bg-surface shadow-lg z-10 py-1">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDropdownOpen(false);
+                      onEdit(assignment);
+                    }}
+                    className="w-full text-left px-3 py-1.5 text-xs text-text-primary hover:bg-surface-muted transition-colors duration-150"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDropdownOpen(false);
+                      onDuplicate(assignment);
+                    }}
+                    className="w-full text-left px-3 py-1.5 text-xs text-text-primary hover:bg-surface-muted transition-colors duration-150"
+                  >
+                    Duplicate
+                  </button>
+                  {assignment.status === AssignmentStatus.Completed && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDropdownOpen(false);
+                        onArchive(assignment.id);
+                      }}
+                      className="w-full text-left px-3 py-1.5 text-xs text-text-primary hover:bg-surface-muted transition-colors duration-150"
+                    >
+                      Archive
+                    </button>
+                  )}
+                  {assignment.status !== AssignmentStatus.Completed && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDropdownOpen(false);
+                        onDelete(assignment);
+                      }}
+                      className="w-full text-left px-3 py-1.5 text-xs text-danger hover:bg-red-50 transition-colors duration-150 font-medium"
+                    >
+                      Delete
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           )}
-        >
-          {status.label}
-        </span>
+        </div>
       </div>
 
       {/* Description */}
@@ -252,32 +343,7 @@ export function AssignmentCard({
             Start work
           </button>
         )}
-
-        {assignment.status === AssignmentStatus.Completed && session && Authorization.canArchiveAssignment(session.role) && (
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); setConfirmOpen(true); }}
-            className={clsx(
-              'text-xs text-text-muted hover:text-danger',
-              'transition-colors duration-150',
-              'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent',
-            )}
-            aria-label={`Archive ${assignment.title}`}
-          >
-            Archive
-          </button>
-        )}
       </div>
-
-      <ConfirmDialog
-        open={confirmOpen}
-        title="Archive assignment"
-        message={`"${assignment.title}" will be archived. It remains in the workspace history and cannot be modified further.`}
-        confirmLabel="Archive"
-        variant="danger"
-        onConfirm={() => { setConfirmOpen(false); onArchive(assignment.id); }}
-        onCancel={() => setConfirmOpen(false)}
-      />
     </div>
   );
 }
