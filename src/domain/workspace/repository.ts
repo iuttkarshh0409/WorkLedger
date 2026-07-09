@@ -42,4 +42,7 @@ export interface IWorkspaceRepository {
 
   /** Returns true if a Workspace with the given id exists. */
   exists(id: EntityId): Promise<boolean | AnyDomainError>;
+
+  /** Deletes the Workspace with the given id. */
+  delete(id: EntityId): Promise<void | AnyDomainError>;
 }

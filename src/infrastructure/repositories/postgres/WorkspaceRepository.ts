@@ -39,4 +39,10 @@ export class WorkspaceRepository implements IWorkspaceRepository {
     if (!ws || (ws as any).kind) return false;
     return true;
   }
+
+  async delete(id: EntityId): Res<void> {
+    return request<void>(`/workspaces/${id}`, {
+      method: 'DELETE',
+    });
+  }
 }

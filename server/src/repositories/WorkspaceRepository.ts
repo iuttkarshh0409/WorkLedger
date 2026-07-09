@@ -1,4 +1,4 @@
-import { query } from '../db.js';
+import { query, transaction } from '../db.js';
 import { Workspace, WorkspaceStatus } from '../types/domain.js';
 import { ttlCache } from '../services/cache.js';
 
@@ -133,6 +133,25 @@ export class WorkspaceCommandRepository {
       status: row.status as WorkspaceStatus,
       version: row.version,
     };
+  }
+
+  async delete(id: string): Promise<void> {
+    await transaction(async (client) => {
+      await client.query('DELETE FROM activities WHERE workspace_id = $1', [id]);
+      await client.query(`
+        DELETE FROM reviews 
+        WHERE assignment_id IN (SELECT id FROM assignments WHERE workspace_id = $1)
+      `, [id]);
+      await client.query(`
+        DELETE FROM submissions 
+        WHERE assignment_id IN (SELECT id FROM assignments WHERE workspace_id = $1)
+      `, [id]);
+      await client.query('DELETE FROM assignments WHERE workspace_id = $1', [id]);
+      await client.query('DELETE FROM milestones WHERE workspace_id = $1', [id]);
+      await client.query('DELETE FROM contributors WHERE workspace_id = $1', [id]);
+      await client.query('DELETE FROM workspaces WHERE id = $1', [id]);
+    });
+    ttlCache.invalidate('workspace');
   }
 }
 

@@ -33,6 +33,21 @@ export function DemoEntryPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Toast state
+  const [toast, setToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    const savedToast = sessionStorage.getItem('wl:toast');
+    if (savedToast) {
+      setToast(savedToast);
+      sessionStorage.removeItem('wl:toast');
+      const timer = setTimeout(() => {
+        setToast(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
   // Load existing workspaces on mount and service dependencies
   useEffect(() => {
     setLoadingWorkspaces(true);
@@ -309,6 +324,17 @@ export function DemoEntryPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-surface-secondary px-4 py-12">
+      {toast && (
+        <div
+          role="alert"
+          className="fixed top-4 right-4 z-50 flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800 shadow-lg animate-fade-in"
+        >
+          <svg className="h-5 w-5 text-green-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span className="font-semibold">{toast}</span>
+        </div>
+      )}
       <div className="card w-full max-w-md bg-surface border border-border rounded-lg shadow-sm p-6">
         <div className="text-center mb-6">
           <h1 className="text-xl font-bold text-text-primary">Welcome to WorkLedger</h1>

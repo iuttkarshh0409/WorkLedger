@@ -84,4 +84,14 @@ export interface IWorkspaceService {
    * Scoped globally — Workspace is the root entity.
    */
   getAllWorkspaces(): Promise<Workspace[] | AnyDomainError>;
+
+  /**
+   * Deletes a Workspace and all its children.
+   *
+   * @permission Owner only
+   */
+  deleteWorkspace(
+    id: EntityId,
+    performedBy: EntityId,
+  ): Promise<void | AnyDomainError>;
 }

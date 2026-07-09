@@ -72,4 +72,20 @@ router.post('/:id/archive', async (req, res, next) => {
   }
 });
 
+router.delete('/:id', async (req, res, next) => {
+  try {
+    const performedBy = req.user?.id || 'system';
+    const userRole = req.user?.role || '';
+
+    if (userRole !== 'Owner') {
+      throw { status: 403, code: 'FORBIDDEN', message: 'Only the workspace owner can delete the workspace.' };
+    }
+
+    await workspaceService.deleteWorkspace(req.params.id, performedBy);
+    sendSuccess(res, { message: 'Workspace deleted successfully.' });
+  } catch (err) {
+    next(err);
+  }
+});
+
 export default router;

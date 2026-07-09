@@ -120,4 +120,17 @@ export class WorkspaceService {
   async getAllWorkspaces(): Promise<Workspace[]> {
     return this.workspaceQuery.findAll();
   }
+
+  async deleteWorkspace(id: string, performedBy: string): Promise<void> {
+    const ws = await this.workspaceQuery.findById(id);
+    if (!ws) {
+      throw { status: 404, code: 'NOT_FOUND', message: `Workspace with id ${id} not found.` };
+    }
+
+    if (ws.ownerId !== performedBy) {
+      throw { status: 403, code: 'FORBIDDEN', message: 'Only the workspace owner can delete the workspace.' };
+    }
+
+    await this.workspaceCommand.delete(id);
+  }
 }

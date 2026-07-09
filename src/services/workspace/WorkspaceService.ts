@@ -173,4 +173,24 @@ export class WorkspaceService implements IWorkspaceService {
   async getAllWorkspaces(): Promise<Workspace[] | AnyDomainError> {
     return this.workspaces.findAll();
   }
+
+  async deleteWorkspace(
+    id: EntityId,
+    performedBy: EntityId,
+  ): Promise<void | AnyDomainError> {
+    const existing = await this.workspaces.findById(id);
+    if (isDomainError(existing)) return existing;
+    if (existing === null) return notFound('Workspace', id);
+
+    // Permission check: owner only
+    if (existing.ownerId !== performedBy) {
+      return {
+        kind: 'PermissionError',
+        action: 'DeleteWorkspace',
+        reason: 'Only the workspace owner can delete the workspace.',
+      } as AnyDomainError;
+    }
+
+    return this.workspaces.delete(id);
+  }
 }
