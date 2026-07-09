@@ -5,6 +5,8 @@ import { isDomainError } from '@lib/errors';
 import { ContributorRole, WorkspaceStatus } from '@domain';
 import type { AnyDomainError } from '@domain';
 import { clsx } from 'clsx';
+import { usePerformanceTracker } from '@infrastructure/logging';
+
 
 function formatDomainError(error: AnyDomainError): string {
   switch (error.kind) {
@@ -33,7 +35,9 @@ export function SettingsPage() {
   } = useServices();
 
   const [loading, setLoading] = useState(true);
+  usePerformanceTracker('Settings', loading);
   const [error, setError] = useState<string | null>(null);
+
 
   const [workspace, setWorkspace] = useState<any>(null);
   const [stats, setStats] = useState({ contributors: 0, assignments: 0, milestones: 0 });

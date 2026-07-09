@@ -1,0 +1,21 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "workledger-backend",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-07-09",
+  "observability": {
+    "enabled": true
+  },
+  "compatibility_flags": [
+    "nodejs_compat",
+    "enable_nodejs_http_modules",
+    "enable_nodejs_http_server_modules"
+  ],
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "746d8440e2124aabae0185320c4655a0",
+      "localConnectionString": "postgresql://neondb_owner:npg_vYzWh8qQJbf7@ep-old-union-atcwpx50.c-9.us-east-1.aws.neon.tech/neondb?sslmode=require"
+    }
+  ]
+}

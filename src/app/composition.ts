@@ -38,13 +38,13 @@ import { LocalStorageProvider } from '@infrastructure/storage/LocalStorageProvid
 import type { IStorageProvider } from '@infrastructure/storage/IStorageProvider';
 
 // ─── Repositories ─────────────────────────────────────────────────────────────
-import { WorkspaceRepository }   from '@infrastructure/repositories/WorkspaceRepository';
-import { ContributorRepository } from '@infrastructure/repositories/ContributorRepository';
-import { MilestoneRepository }   from '@infrastructure/repositories/MilestoneRepository';
-import { AssignmentRepository }  from '@infrastructure/repositories/AssignmentRepository';
-import { SubmissionRepository }  from '@infrastructure/repositories/SubmissionRepository';
-import { ReviewRepository }      from '@infrastructure/repositories/ReviewRepository';
-import { ActivityRepository }    from '@infrastructure/repositories/ActivityRepository';
+import { WorkspaceRepository }   from '@infrastructure/repositories/postgres/WorkspaceRepository';
+import { ContributorRepository } from '@infrastructure/repositories/postgres/ContributorRepository';
+import { MilestoneRepository }   from '@infrastructure/repositories/postgres/MilestoneRepository';
+import { AssignmentRepository }  from '@infrastructure/repositories/postgres/AssignmentRepository';
+import { SubmissionRepository }  from '@infrastructure/repositories/postgres/SubmissionRepository';
+import { ReviewRepository }      from '@infrastructure/repositories/postgres/ReviewRepository';
+import { ActivityRepository }    from '@infrastructure/repositories/postgres/ActivityRepository';
 
 // ─── Services ─────────────────────────────────────────────────────────────────
 import { ActivityService }     from '@services/activity/ActivityService';
@@ -149,15 +149,14 @@ export function createApplicationComposition(): ApplicationComposition {
   const storage: ApplicationStorage = Object.freeze({ provider });
 
   // ── Layer 2: Repositories ─────────────────────────────────────────────────
-  // Each repository receives only the storage provider.
-  // Order within this group is arbitrary — no inter-repository dependencies.
-  const workspaces   = new WorkspaceRepository(provider);
-  const contributors = new ContributorRepository(provider);
-  const milestones   = new MilestoneRepository(provider);
-  const assignments  = new AssignmentRepository(provider);
-  const submissions  = new SubmissionRepository(provider);
-  const reviews      = new ReviewRepository(provider);
-  const activities   = new ActivityRepository(provider);
+  // Note: Swapped to PostgreSQL REST-backed clients. They do not require the LocalStorage provider.
+  const workspaces   = new WorkspaceRepository();
+  const contributors = new ContributorRepository();
+  const milestones   = new MilestoneRepository();
+  const assignments  = new AssignmentRepository();
+  const submissions  = new SubmissionRepository();
+  const reviews      = new ReviewRepository();
+  const activities   = new ActivityRepository();
 
   const repositories: ApplicationRepositories = Object.freeze({
     workspaces,

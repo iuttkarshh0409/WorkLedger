@@ -14,6 +14,7 @@ import {
 } from '@features/analytics/AnalyticsComponents';
 import { AssignmentStatus, ContributorStatus } from '@domain';
 import type { Assignment, Contributor, Milestone, Review, Activity } from '@domain';
+import { usePerformanceTracker } from '@infrastructure/logging';
 
 export function AnalyticsPage() {
   const { session } = useSession();
@@ -27,6 +28,8 @@ export function AnalyticsPage() {
   } = useServices();
 
   const [loading, setLoading] = useState(true);
+  usePerformanceTracker('Analytics', loading);
+
   const [error, setError] = useState<string | null>(null);
 
   // Raw data state

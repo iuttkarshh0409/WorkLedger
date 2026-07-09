@@ -15,6 +15,8 @@ import { AssignmentStatus, AssignmentPriority, ContributorRole } from '@domain';
 import { isDomainError } from '@lib/errors';
 import { getOrCreateDemoWorkspace } from '@lib/bootstrap';
 import { useSession } from '@app/SessionContext';
+import { usePerformanceTracker } from '@infrastructure/logging';
+
 
 function formatError(result: AnyDomainError): string {
   switch (result.kind) {
@@ -75,7 +77,9 @@ export function ReviewsPage() {
   const { session } = useSession();
 
   const [loading, setLoading] = useState(true);
+  usePerformanceTracker('Reviews', loading);
   const [error, setError] = useState<string | null>(null);
+
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [contributors, setContributors] = useState<Contributor[]>([]);
   const [latestSubmissions, setLatestSubmissions] = useState<Record<string, Submission>>({});
