@@ -1,7 +1,7 @@
 /**
  * main.tsx
  *
- * Application entry point.
+ * Application entry point for Vercel deployment.
  *
  * Responsibilities (in order):
  *   1. Import global styles so Tailwind base layers apply before React renders.
