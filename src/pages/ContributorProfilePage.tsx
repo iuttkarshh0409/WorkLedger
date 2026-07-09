@@ -13,8 +13,10 @@ import type { Assignment, Contributor, Review, Activity, AnyDomainError } from '
 import { ActivityTimeline } from '@features/activity/ActivityTimeline';
 import { ReviewHistory } from '@features/reviews/ReviewHistory';
 import { clsx } from 'clsx';
+import { usePerformanceTracker } from '@infrastructure/logging';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
 
 function roleLabel(role: ContributorRole): string {
   return role;
@@ -230,7 +232,9 @@ export function ContributorProfilePage() {
   } = useServices();
 
   const [loading, setLoading] = useState(true);
+  usePerformanceTracker('ContributorProfile', loading);
   const [error, setError] = useState<string | null>(null);
+
 
   const [contributor, setContributor] = useState<Contributor | null>(null);
   const [workspace, setWorkspace] = useState<any>(null);

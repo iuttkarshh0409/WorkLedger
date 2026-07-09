@@ -32,6 +32,8 @@ import type { ContributorFormValues } from '@features/contributors/ContributorFo
 import type { AssignmentFormValues }  from '@features/assignments/AssignmentFormDialog';
 import { isDomainError }   from '@lib/errors';
 import { getOrCreateDemoWorkspace, DEMO_OWNER_ID } from '@lib/bootstrap';
+import { usePerformanceTracker } from '@infrastructure/logging';
+
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 
@@ -98,6 +100,9 @@ export function DashboardPage() {
     reviewService,
     milestoneService,
   );
+
+  usePerformanceTracker('Dashboard', loading);
+
 
   // ── Quick action state ─────────────────────────────────────────────────────
   const [submittingContrib,  setSubmittingContrib]  = useState(false);

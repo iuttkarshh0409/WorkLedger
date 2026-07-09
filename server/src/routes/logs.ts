@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { randomUUID } from 'crypto';
-import { readLogs, writeLog, clearLogs } from '../services/logger.js';
+import { readLogs, writeLog, clearLogs, writePerfLog } from '../services/logger.js';
 import { AuditLog } from '../types/index.js';
 
 const router = Router();
@@ -21,7 +21,20 @@ function formatDuration(ms: number): string {
 // POST /logs - write a new log
 router.post('/', async (req: Request, res: Response) => {
   try {
+    if (req.body && req.body.category === 'Performance') {
+      const perfEvent = req.body;
+      const durationMs = perfEvent.durationMs || 0;
+      const isSlow = durationMs > 300;
+      const isSampled = isSlow || Math.random() < 0.1;
+      if (isSampled) {
+        await writePerfLog(perfEvent);
+      }
+      res.status(201).json({ status: 'created', log: perfEvent });
+      return;
+    }
+
     const logPayload = req.body as AuditLog;
+
 
     if (!logPayload.workspace || !logPayload.actor || !logPayload.event || !logPayload.entity) {
       res.status(400).json({ error: 'Invalid log payload: missing required fields' });

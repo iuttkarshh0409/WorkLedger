@@ -18,7 +18,7 @@ import { SESSION_STORAGE_KEY } from '@app/SessionContext';
  * A stable synthetic owner id for the demo workspace.
  * Kept for backwards compatibility with existing feature page quick actions.
  */
-export const DEMO_OWNER_ID: EntityId = 'demo-owner-001';
+export const DEMO_OWNER_ID: EntityId = '00000000-0000-0000-0000-000000000001';
 
 /**
  * getOrCreateDemoWorkspace
