@@ -15,9 +15,9 @@ export class ContributorCommandRepository {
   async update(c: Contributor): Promise<void> {
     const res = await query(
       `UPDATE contributors
-       SET name = $1, email = $2, avatar = $3, role = $4, status = $5, version = version + 1, updated_at = NOW()
+       SET name = $1, email = $2, avatar = $3, role = $4, status = $5, version = version + 1, updated_at = NOW(), workspace_id = $8
        WHERE id = $6 AND version = $7 AND archived_at IS NULL`,
-      [c.name, c.email, c.avatar, c.role, c.status, c.id, c.version]
+      [c.name, c.email, c.avatar, c.role, c.status, c.id, c.version, c.workspaceId]
     );
     if (res.rowCount === 0) {
       throw {
@@ -118,10 +118,12 @@ export class ContributorCommandRepository {
 }
 
 export class ContributorQueryRepository {
-  async findById(id: string): Promise<Contributor | null> {
+  async findById(id: string, bypassCache = false): Promise<Contributor | null> {
     const cacheKey = `contributor:${id}`;
-    const cached = ttlCache.get<Contributor>(cacheKey);
-    if (cached) return cached;
+    if (!bypassCache) {
+      const cached = ttlCache.get<Contributor>(cacheKey);
+      if (cached) return cached;
+    }
 
     const res = await query(
       `SELECT * FROM contributors WHERE id = $1 AND archived_at IS NULL`,

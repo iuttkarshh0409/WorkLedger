@@ -189,15 +189,23 @@ export function errorHandler(
 ): void {
   console.error(`[Error] Request ${req.requestId || 'N/A'} failed:`, err);
 
-  const origin = req.headers.origin;
-  if (origin) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-  }
+  const origin = req.headers.origin || req.headers.Origin || '*';
+  res.setHeader('Access-Control-Allow-Origin', origin);
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Request-ID,X-Session-ID,X-Client-Timestamp,x-user-id,x-user-role,x-user-email,x-user-name,x-workspace-id');
 
   const code = err.code || 'INTERNAL_SERVER_ERROR';
   const message = err.message || 'An unexpected error occurred.';
-  const details = err.details || {};
+  const details = {
+    ...(err.details || {}),
+    dbCode: err.code,
+    dbMessage: err.message,
+    dbDetail: err.detail,
+    dbTable: err.table,
+    dbConstraint: err.constraint,
+    stack: err.stack,
+  };
   const status = err.status || 500;
 
   sendError(res, code, message, details, status);

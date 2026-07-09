@@ -36,7 +36,7 @@ export function getPool(): pg.Pool {
     connectionString,
     max: isCloudflareEnv ? 2 : 20,
     idleTimeoutMillis: isCloudflareEnv ? 1000 : 30000,
-    connectionTimeoutMillis: 5000,
+    connectionTimeoutMillis: 15000,
   });
 
   activePool.on('error', (err) => {
